@@ -5,8 +5,8 @@ use ::c_w_string::CWcharString;
 use std::ffi::CString;
 use std::path::Path;
 
-type uint64 = libc::uint64_t;
-type uint8  = libc::uint8_t;
+type uint64 = u64;
+type uint8  = u8;
 type size_t = libc::size_t;
 type wchar  = libc::wchar_t;
 type c_char = libc::c_char;
@@ -197,7 +197,7 @@ impl MediaInfo {
             let bytes_ptr = &data[0] as *const uint8;
             let result = MediaInfo_Open_Buffer_Continue(self.handle,
                                                         bytes_ptr,
-                                                        data.len() as uint64);
+                                                        data.len() as size_t);
             result as usize
         }
     }

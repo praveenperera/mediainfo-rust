@@ -1,8 +1,8 @@
-use ffi::{MediaInfo, MediaInfoInfo, MediaInfoResult, MediaInfoError, MediaInfoStream};
-use chrono::{UTC, DateTime, NaiveDateTime};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use ffi::{MediaInfo, MediaInfoError, MediaInfoInfo, MediaInfoResult, MediaInfoStream};
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Duration;
 
 macro_rules! stream_struct {
@@ -12,7 +12,7 @@ macro_rules! stream_struct {
             pub index: usize,
             pub handler: Rc<RefCell<MediaInfo>>,
         }
-    }
+    };
 }
 
 macro_rules! base_stream_implement {
@@ -30,57 +30,75 @@ macro_rules! base_stream_implement {
                 Some(&self.handler)
             }
         }
-    }
+    };
 }
 
 macro_rules! mediainfo_attr {
-    ($meth_name: ident, $attr_name: tt) => (
+    ($meth_name: ident, $attr_name: tt) => {
         pub fn $meth_name(&self) -> MediaInfoResult<String> {
             match self.handler() {
-                Some(rc) => rc.borrow_mut().get(self.stream_type(), self.index(), $attr_name, MediaInfoInfo::Text, MediaInfoInfo::Name),
-                None => Err(MediaInfoError::NoDataOpenError)
+                Some(rc) => rc.borrow_mut().get(
+                    self.stream_type(),
+                    self.index(),
+                    $attr_name,
+                    MediaInfoInfo::Text,
+                    MediaInfoInfo::Name,
+                ),
+                None => Err(MediaInfoError::NoDataOpenError),
             }
         }
-    )
+    };
 }
 
 macro_rules! mediainfo_date {
-    ($meth_name: ident, $attr_name: tt) => (
-        pub fn $meth_name(&self) -> MediaInfoResult<DateTime<UTC>> {
+    ($meth_name: ident, $attr_name: tt) => {
+        pub fn $meth_name(&self) -> MediaInfoResult<DateTime<Utc>> {
             match self.handler() {
-                Some(rc) => {
-                    self.result_to_date(rc.borrow_mut().get(self.stream_type(), self.index(), $attr_name, MediaInfoInfo::Text, MediaInfoInfo::Name))
-                },
+                Some(rc) => self.result_to_date(rc.borrow_mut().get(
+                    self.stream_type(),
+                    self.index(),
+                    $attr_name,
+                    MediaInfoInfo::Text,
+                    MediaInfoInfo::Name,
+                )),
                 None => Err(MediaInfoError::NoDataOpenError),
             }
         }
-    )
+    };
 }
 
 macro_rules! mediainfo_i64 {
-    ($meth_name: ident, $attr_name: tt) => (
+    ($meth_name: ident, $attr_name: tt) => {
         pub fn $meth_name(&self) -> MediaInfoResult<i64> {
             match self.handler() {
-                Some(rc) => {
-                    self.result_to_i64(rc.borrow_mut().get(self.stream_type(), self.index(), $attr_name, MediaInfoInfo::Text, MediaInfoInfo::Name))
-                },
+                Some(rc) => self.result_to_i64(rc.borrow_mut().get(
+                    self.stream_type(),
+                    self.index(),
+                    $attr_name,
+                    MediaInfoInfo::Text,
+                    MediaInfoInfo::Name,
+                )),
                 None => Err(MediaInfoError::NoDataOpenError),
             }
         }
-    )
+    };
 }
 
 macro_rules! mediainfo_duration {
-    ($meth_name: ident, $attr_name: tt) => (
+    ($meth_name: ident, $attr_name: tt) => {
         pub fn $meth_name(&self) -> MediaInfoResult<Duration> {
             match self.handler() {
-                Some(rc) => {
-                    self.result_to_duration(rc.borrow_mut().get(self.stream_type(), self.index(), $attr_name, MediaInfoInfo::Text, MediaInfoInfo::Name))
-                },
+                Some(rc) => self.result_to_duration(rc.borrow_mut().get(
+                    self.stream_type(),
+                    self.index(),
+                    $attr_name,
+                    MediaInfoInfo::Text,
+                    MediaInfoInfo::Name,
+                )),
                 None => Err(MediaInfoError::NoDataOpenError),
             }
         }
-    )
+    };
 }
 
 pub struct GeneralStream {
@@ -96,7 +114,7 @@ pub trait BaseStream {
     fn result_to_duration(&self, result: MediaInfoResult<String>) -> MediaInfoResult<Duration> {
         match result?.parse::<u64>() {
             Ok(x) => Ok(Duration::from_millis(x)),
-            Err(_) =>Err(MediaInfoError::NonNumericResultError),
+            Err(_) => Err(MediaInfoError::NonNumericResultError),
         }
     }
 
@@ -107,9 +125,14 @@ pub trait BaseStream {
         }
     }
 
-    fn result_to_date(&self, result: MediaInfoResult<String>) -> MediaInfoResult<DateTime<UTC>> {
-        match NaiveDateTime::parse_from_str(&result?, "UTC %Y-%m-%d %H:%M:%S") {
-            Ok(x) => Ok(DateTime::<UTC>::from_utc(x, UTC)),
+    fn result_to_date(&self, result: MediaInfoResult<String>) -> MediaInfoResult<DateTime<Utc>> {
+        let input = &result?;
+        println!("input {input:?}");
+
+        let naive = NaiveDateTime::parse_from_str(input, "%Y-%m-%d %H:%M:%S UTC");
+        println!("naive {naive:?}");
+        match naive {
+            Ok(x) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(x, Utc)),
             Err(_) => Err(MediaInfoError::NonNumericResultError),
         }
     }
@@ -173,7 +196,7 @@ impl GeneralStream {
     mediainfo_date!(tagged_date, "Tagged_Date");
 
     pub fn writing_application(&self) -> MediaInfoResult<String> {
-       match self.encoded_application() {
+        match self.encoded_application() {
             Ok(x) => Ok(x),
             Err(_) => self.encoded_application_string(),
         }
@@ -191,7 +214,7 @@ impl VideoStream {
     pub fn cbr(&self) -> bool {
         match self.bit_rate_mode() {
             Ok(x) => x == "Constant",
-            Err(_) => false
+            Err(_) => false,
         }
     }
 
@@ -205,7 +228,7 @@ impl VideoStream {
     pub fn interlaced(&self) -> bool {
         match self.scan_type() {
             Ok(x) => x == "Interlaced",
-            Err(_) => false
+            Err(_) => false,
         }
     }
 
@@ -283,14 +306,14 @@ impl AudioStream {
     pub fn stereo(&self) -> bool {
         match self.channels() {
             Ok(x) => x == 2,
-            Err(_) => false
+            Err(_) => false,
         }
     }
 
     pub fn mono(&self) -> bool {
         match self.channels() {
             Ok(x) => x == 1,
-            Err(_) => false
+            Err(_) => false,
         }
     }
 
