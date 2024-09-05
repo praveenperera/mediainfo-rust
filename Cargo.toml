@@ -14,9 +14,9 @@ exclude = [
 ]
 
 [dependencies]
-libc = "0.1"
-delegate = "0.1"
-chrono = "0.3"
+libc = "0.2"
+delegate = "0.13"
+chrono = "0.4"
 
 [build-dependencies.pkg-config]
-version = "0.3.9"
+version = "0.3"
