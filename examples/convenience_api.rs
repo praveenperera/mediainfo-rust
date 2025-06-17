@@ -1,11 +1,11 @@
 extern crate mediainfo;
 
 use mediainfo::MediaInfoWrapper;
-use std::path::PathBuf;
+use std::{env::current_dir, path::PathBuf};
 
 fn main() {
     let mut media_info = MediaInfoWrapper::new();
-    let sample_path = PathBuf::from("../samples");
+    let sample_path = PathBuf::from("samples");
     let extnames = ["mp3", "m4a", "flac"];
 
     for ext in extnames.iter() {
@@ -13,7 +13,10 @@ fn main() {
 
         media_info.open(&filename).expect("It should open the file.");
         println!("Filename: {}", filename.to_str().as_ref().unwrap());
-        println!("{}\n", media_info.codec().unwrap());
+        println!("{:?}\n", media_info.duration().unwrap());
+
+        let _ = media_info.option("output", "JSON");
+        println!("{}\n", media_info.inform().unwrap());
 
         media_info.close();
     }

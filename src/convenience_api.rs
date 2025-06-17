@@ -75,6 +75,14 @@ impl MediaInfoWrapper {
         Ok(())
     }
 
+    pub fn option(&mut self, parameter: &str, value: &str) -> MediaInfoResult<String> {
+        self.handle.borrow_mut().option(parameter, value)
+    }
+
+    pub fn inform(&mut self) -> MediaInfoResult<String> {
+        self.handle.borrow_mut().inform()
+    }
+
     pub fn close(&mut self) {
         self.general_stream.handler = None;
         self.video_streams = None;
