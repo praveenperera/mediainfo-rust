@@ -26,7 +26,9 @@ fn build_for_wasm() {
     println!("cargo:rerun-if-changed=mediainfo_src/");
     
     // Set TARGET environment variable for the compile script
-    env::set_var("TARGET", &target);
+    unsafe {
+        env::set_var("TARGET", &target);
+    }
     
     // Run the SO_Compile.sh script to build MediaInfo for WASM
     let output = Command::new("sh")
