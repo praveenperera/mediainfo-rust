@@ -1,5 +1,5 @@
 use std::env;
-use std::process::Command;
+use std::path::PathBuf;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
@@ -19,35 +19,47 @@ fn build_for_native() {
 }
 
 fn build_for_wasm() {
-    let mediainfo_src = env::var("MEDIAINFO_SOURCE")
-        .unwrap_or_else(|_| panic!("MEDIAINFO_SOURCE environment variable must be set for wasm builds"));
+    use std::process::Command;
     
-    // Build libmediainfo with emscripten
-    let status = Command::new("emconfigure")
-        .args(&["./configure", "--enable-static", "--disable-shared"])
-        .current_dir(&mediainfo_src)
-        .status()
-        .expect("Failed to configure MediaInfo");
+    let target = env::var("TARGET").unwrap();
+    println!("cargo:rerun-if-changed=mediainfo_src/SO_Compile.sh");
+    println!("cargo:rerun-if-changed=mediainfo_src/");
     
-    if !status.success() {
-        panic!("Failed to configure MediaInfo for wasm");
+    // Set TARGET environment variable for the compile script
+    env::set_var("TARGET", &target);
+    
+    // Run the SO_Compile.sh script to build MediaInfo for WASM
+    let output = Command::new("sh")
+        .arg("mediainfo_src/SO_Compile.sh")
+        .env("TARGET", &target)
+        .output()
+        .expect("Failed to execute SO_Compile.sh");
+    
+    if !output.status.success() {
+        panic!(
+            "SO_Compile.sh failed with status: {}\nstdout: {}\nstderr: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
     
-    let status = Command::new("emmake")
-        .args(&["make", "-j4"])
-        .current_dir(&mediainfo_src)
-        .status()
-        .expect("Failed to build MediaInfo");
+    println!("SO_Compile.sh output: {}", String::from_utf8_lossy(&output.stdout));
     
-    if !status.success() {
-        panic!("Failed to build MediaInfo for wasm");
-    }
+    // Link against the compiled MediaInfo libraries
+    // The script builds libraries in MediaInfoLib/Project/GNU/Library/.libs/
+    let mediainfo_lib_path = "mediainfo_src/MediaInfoLib/Project/GNU/Library/.libs";
+    let zenlib_path = "mediainfo_src/ZenLib/Project/GNU/Library/.libs";
     
-    // Link the built library
-    println!("cargo:rustc-link-search=native={}/Source/MediaInfo/.libs", mediainfo_src);
+    println!("cargo:rustc-link-search=native={}", mediainfo_lib_path);
+    println!("cargo:rustc-link-search=native={}", zenlib_path);
     println!("cargo:rustc-link-lib=static=mediainfo");
+    println!("cargo:rustc-link-lib=static=zen");
     
-    // Also need to link MediaInfoLib dependencies
-    println!("cargo:rustc-link-search=native={}/Source/MediaInfoLib/.libs", mediainfo_src);
-    println!("cargo:rustc-link-lib=static=mediainfolib");
+    // Add WASM-specific linker flags
+    println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
+    println!("cargo:rustc-link-arg=-sMALLOC=emmalloc");
+    println!("cargo:rustc-link-arg=-sASSERTIONS=0");
+    println!("cargo:rustc-link-arg=-sNO_FILESYSTEM=1");
+    println!("cargo:rustc-link-arg=-sINITIAL_MEMORY=33554432");
 }
