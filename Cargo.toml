@@ -2,7 +2,7 @@
 name = "mediainfo"
 description = "Rust bindings for libmediainfo"
 version = "0.2.0"
-authors = ["Erick Pires <pires@erickpires.com>"]
+authors = ["Erick Pires <pires@erickpires.com>", "Adam Browne <adambr@hey.com>"]
 license = "MIT"
 links = "mediainfo"
 build = "build.rs"

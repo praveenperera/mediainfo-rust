@@ -61,6 +61,7 @@ impl MediaInfoInfo {
     }
 }
 
+#[derive(Debug)]
 pub struct MediaInfo {
     handle: *mut void,
 }

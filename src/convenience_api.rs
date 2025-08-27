@@ -5,12 +5,24 @@ use streams::{
 
 use chrono::{DateTime, Utc};
 use std::path::Path;
-use std::rc::Rc;
-use std::{cell::RefCell, time::Duration};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+/// Comprehensive media information result containing all streams
+#[derive(Debug)]
+pub struct MediaInfoFullResult {
+    pub general: GeneralStream,
+    pub video_streams: Vec<VideoStream>,
+    pub audio_streams: Vec<AudioStream>,
+    pub text_streams: Vec<TextStream>,
+    pub image_streams: Vec<ImageStream>,
+    pub menu_streams: Vec<MenuStream>,
+    pub other_streams: Vec<OtherStream>,
+}
 
 pub struct MediaInfoWrapper {
     general_stream: GeneralStream,
-    handle: Rc<RefCell<MediaInfo>>,
+    handle: Arc<Mutex<MediaInfo>>,
     video_streams: Option<Vec<VideoStream>>,
     audio_streams: Option<Vec<AudioStream>>,
     image_streams: Option<Vec<ImageStream>>,
@@ -32,7 +44,7 @@ impl Default for MediaInfoWrapper {
             menu_streams: None,
             text_streams: None,
             other_streams: None,
-            handle: Rc::new(RefCell::new(MediaInfo::new())),
+            handle: Arc::new(Mutex::new(MediaInfo::new())),
         }
     }
 }
@@ -43,7 +55,7 @@ impl MediaInfoWrapper {
     }
 
     pub fn open(&mut self, path: &Path) -> MediaInfoResult<usize> {
-        let result = self.handle.borrow_mut().open(path);
+        let result = self.handle.lock().unwrap().open(path);
 
         match result {
             Ok(r) => {
@@ -61,10 +73,10 @@ impl MediaInfoWrapper {
         }
 
         self.handle
-            .borrow_mut()
+            .lock().unwrap()
             .open_buffer_init(data_len as u64, 0);
-        let continue_result = self.handle.borrow_mut().open_buffer_continue(data);
-        let finalize_result = self.handle.borrow_mut().open_buffer_finalize();
+        let continue_result = self.handle.lock().unwrap().open_buffer_continue(data);
+        let finalize_result = self.handle.lock().unwrap().open_buffer_finalize();
 
         if continue_result & 0x01 == 0 || finalize_result == 0 {
             return Err("Could not read buffer".to_string());
@@ -76,11 +88,15 @@ impl MediaInfoWrapper {
     }
 
     pub fn option(&mut self, parameter: &str, value: &str) -> MediaInfoResult<String> {
-        self.handle.borrow_mut().option(parameter, value)
+        self.handle.lock().unwrap().option(parameter, value)
     }
 
     pub fn inform(&mut self) -> MediaInfoResult<String> {
-        self.handle.borrow_mut().inform()
+        self.handle.lock().unwrap().inform()
+    }
+
+    pub fn available_parameters(&mut self) -> MediaInfoResult<String> {
+        self.handle.lock().unwrap().available_parameters()
     }
 
     pub fn close(&mut self) {
@@ -91,76 +107,76 @@ impl MediaInfoWrapper {
         self.menu_streams = None;
         self.text_streams = None;
         self.other_streams = None;
-        self.handle.borrow_mut().close();
+        self.handle.lock().unwrap().close();
     }
 
     fn wrap_streams(&mut self) {
-        self.general_stream.handler = Some(Rc::clone(&self.handle));
+        self.general_stream.handler = Some(Arc::clone(&self.handle));
 
         for stype in MediaInfoStream::variants() {
             match stype {
                 MediaInfoStream::Video => {
                     let mut streams = Vec::new();
-                    for i in 0..self.handle.borrow_mut().count_get(stype) {
+                    for i in 0..self.handle.lock().unwrap().count_get(stype) {
                         streams.push(VideoStream {
                             stream_type: stype,
                             index: i,
-                            handler: Rc::clone(&self.handle),
+                            handler: Arc::clone(&self.handle),
                         });
                     }
                     self.video_streams = Some(streams);
                 }
                 MediaInfoStream::Audio => {
                     let mut streams = Vec::new();
-                    for i in 0..self.handle.borrow_mut().count_get(stype) {
+                    for i in 0..self.handle.lock().unwrap().count_get(stype) {
                         streams.push(AudioStream {
                             stream_type: stype,
                             index: i,
-                            handler: Rc::clone(&self.handle),
+                            handler: Arc::clone(&self.handle),
                         });
                     }
                     self.audio_streams = Some(streams);
                 }
                 MediaInfoStream::Text => {
                     let mut streams = Vec::new();
-                    for i in 0..self.handle.borrow_mut().count_get(stype) {
+                    for i in 0..self.handle.lock().unwrap().count_get(stype) {
                         streams.push(TextStream {
                             stream_type: stype,
                             index: i,
-                            handler: Rc::clone(&self.handle),
+                            handler: Arc::clone(&self.handle),
                         });
                     }
                     self.text_streams = Some(streams);
                 }
                 MediaInfoStream::Other => {
                     let mut streams = Vec::new();
-                    for i in 0..self.handle.borrow_mut().count_get(stype) {
+                    for i in 0..self.handle.lock().unwrap().count_get(stype) {
                         streams.push(OtherStream {
                             stream_type: stype,
                             index: i,
-                            handler: Rc::clone(&self.handle),
+                            handler: Arc::clone(&self.handle),
                         });
                     }
                     self.other_streams = Some(streams);
                 }
                 MediaInfoStream::Image => {
                     let mut streams = Vec::new();
-                    for i in 0..self.handle.borrow_mut().count_get(stype) {
+                    for i in 0..self.handle.lock().unwrap().count_get(stype) {
                         streams.push(ImageStream {
                             stream_type: stype,
                             index: i,
-                            handler: Rc::clone(&self.handle),
+                            handler: Arc::clone(&self.handle),
                         });
                     }
                     self.image_streams = Some(streams);
                 }
                 MediaInfoStream::Menu => {
                     let mut streams = Vec::new();
-                    for i in 0..self.handle.borrow_mut().count_get(stype) {
+                    for i in 0..self.handle.lock().unwrap().count_get(stype) {
                         streams.push(MenuStream {
                             stream_type: stype,
                             index: i,
-                            handler: Rc::clone(&self.handle),
+                            handler: Arc::clone(&self.handle),
                         });
                     }
                     self.menu_streams = Some(streams);
@@ -192,6 +208,88 @@ impl MediaInfoWrapper {
 
     pub fn menu_streams(&self) -> Option<&Vec<MenuStream>> {
         self.menu_streams.as_ref()
+    }
+
+    /// Returns a comprehensive result containing all streams and media information
+    /// 
+    /// This method provides access to all available stream information in a single
+    /// structured format, including general information and all stream types.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns `MediaInfoFullResult` containing:
+    /// - General stream information (format, duration, etc.)
+    /// - All video streams
+    /// - All audio streams  
+    /// - All text/subtitle streams
+    /// - All image streams
+    /// - All menu streams
+    /// - All other streams
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if no media file has been opened or if there are issues
+    /// accessing the media information.
+    pub fn get_full_result(&self) -> Result<MediaInfoFullResult, String> {
+        if self.general_stream.handler.is_none() {
+            return Err("No media file opened".to_string());
+        }
+
+        Ok(MediaInfoFullResult {
+            general: GeneralStream {
+                stream_type: self.general_stream.stream_type,
+                handler: self.general_stream.handler.clone(),
+            },
+            video_streams: self.video_streams.clone().unwrap_or_default(),
+            audio_streams: self.audio_streams.clone().unwrap_or_default(),
+            text_streams: self.text_streams.clone().unwrap_or_default(),
+            image_streams: self.image_streams.clone().unwrap_or_default(),
+            menu_streams: self.menu_streams.clone().unwrap_or_default(),
+            other_streams: self.other_streams.clone().unwrap_or_default(),
+        })
+    }
+
+    /// Returns the full MediaInfo output as a formatted string
+    /// 
+    /// This method returns the complete MediaInfo analysis in the default
+    /// text format, which includes detailed information about all streams.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns the full MediaInfo text output containing all available information
+    /// about the media file, including general properties and all stream details.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if no media file has been opened or if there are issues
+    /// retrieving the information from the MediaInfo library.
+    pub fn get_full_inform(&mut self) -> MediaInfoResult<String> {
+        self.inform()
+    }
+
+    /// Returns the full MediaInfo output in JSON format
+    /// 
+    /// This method configures MediaInfo to output in JSON format and returns
+    /// the complete analysis as a JSON string, which includes all streams and
+    /// their properties in a structured format.
+    /// 
+    /// # Returns
+    /// 
+    /// Returns the full MediaInfo analysis as a JSON string containing all
+    /// available information about the media file and its streams.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if no media file has been opened, if JSON output cannot
+    /// be configured, or if there are issues retrieving the information.
+    pub fn get_full_inform_json(&mut self) -> MediaInfoResult<String> {
+        let _ = self.option("output", "JSON");
+        // We want it at the full version here.
+        let _ = self.option("Complete", "1");
+        let result = self.inform();
+        // Reset to default Output format
+        let _ = self.option("output", "");
+        result
     }
 
     delegate! {
@@ -295,5 +393,72 @@ mod tests {
         };
 
         assert_eq!("AVC", vstream.format().unwrap());
+    }
+
+    #[test]
+    fn can_get_full_result_structure() {
+        let sample_path = PathBuf::from("samples");
+        let filename = sample_path.join("sample.mp4");
+        let mut mw = MediaInfoWrapper::new();
+        mw.open(filename.as_path()).unwrap();
+
+        let full_result = mw.get_full_result().expect("Should get full result");
+
+        // Check general stream
+        assert_eq!("MPEG-4", full_result.general.format().unwrap());
+        assert_eq!("mp42", full_result.general.codec_id().unwrap());
+
+        // Check we have video streams
+        assert_eq!(1, full_result.video_streams.len());
+        assert_eq!("AVC", full_result.video_streams[0].format().unwrap());
+
+        // Check we have audio streams
+        assert_eq!(1, full_result.audio_streams.len());
+        assert_eq!("AAC", full_result.audio_streams[0].format().unwrap());
+
+        mw.close();
+    }
+
+    #[test]
+    fn can_get_full_inform_json() {
+        let sample_path = PathBuf::from("/Users/adambrowne/Downloads");
+        let filename = sample_path.join("library_1b40173c-7d06-464f-bc87-bfd9ab806132.mp4");
+        let mut mw = MediaInfoWrapper::new();
+        mw.open(filename.as_path()).unwrap();
+
+        let json_output = mw.get_full_inform_json().expect("Should get JSON output");
+        
+        // Basic check that it's JSON-like
+        assert!(json_output.contains("{"));
+        assert!(json_output.contains("}"));
+        assert!(json_output.contains("media"));
+
+        mw.close();
+    }
+
+    #[test]
+    fn can_get_full_inform_text() {
+        let sample_path = PathBuf::from("samples");
+        let filename = sample_path.join("sample.mp4");
+        let mut mw = MediaInfoWrapper::new();
+        mw.open(filename.as_path()).unwrap();
+
+        let text_output = mw.get_full_inform().expect("Should get text output");
+        
+        // Basic checks for expected content
+        assert!(text_output.contains("General"));
+        assert!(text_output.contains("Video"));
+        assert!(text_output.contains("Audio"));
+
+        mw.close();
+    }
+
+    #[test]
+    fn full_result_fails_without_open_file() {
+        let mw = MediaInfoWrapper::new();
+        
+        let result = mw.get_full_result();
+        assert!(result.is_err());
+        assert_eq!("No media file opened", result.err().unwrap());
     }
 }
