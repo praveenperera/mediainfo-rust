@@ -106,7 +106,6 @@ impl MediaInfo {
         }
     }
 
-
     pub fn option(&mut self, parameter: &str, value: &str) -> MediaInfoResult<String> {
         unsafe {
             let param_w_string = CWcharString::from_str(parameter);
@@ -203,6 +202,18 @@ impl MediaInfo {
         }
     }
 
+    pub fn open_buffer_continue_goto_get_lower(&mut self) -> usize {
+        unsafe { MediaInfo_Open_Buffer_Continue_GoTo_Get(self.handle) as usize }
+    }
+
+    pub fn open_buffer_continue_goto_get_upper(&mut self) -> usize {
+        unsafe { (MediaInfo_Open_Buffer_Continue_GoTo_Get(self.handle) >> 32) as usize }
+    }
+
+    pub fn open_buffer_continue_goto_get(&mut self) -> usize {
+        unsafe { MediaInfo_Open_Buffer_Continue_GoTo_Get(self.handle) as usize }
+    }
+
     pub fn open_buffer_finalize(&mut self) -> usize {
         unsafe { MediaInfo_Open_Buffer_Finalize(self.handle) as usize }
     }
@@ -242,6 +253,8 @@ extern "C" {
     fn MediaInfo_Open_Buffer_Continue(handle: *mut void,
                                       bytes: *const uint8,
                                       length: size_t) -> size_t;
+
+    fn MediaInfo_Open_Buffer_Continue_GoTo_Get(handle: *mut void) -> size_t;
 
     fn MediaInfo_Open_Buffer_Finalize(handle: *mut void) -> size_t;
 

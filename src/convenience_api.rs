@@ -8,18 +8,6 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-/// Comprehensive media information result containing all streams
-#[derive(Debug)]
-pub struct MediaInfoFullResult {
-    pub general: GeneralStream,
-    pub video_streams: Vec<VideoStream>,
-    pub audio_streams: Vec<AudioStream>,
-    pub text_streams: Vec<TextStream>,
-    pub image_streams: Vec<ImageStream>,
-    pub menu_streams: Vec<MenuStream>,
-    pub other_streams: Vec<OtherStream>,
-}
-
 pub struct MediaInfoWrapper {
     general_stream: GeneralStream,
     handle: Arc<Mutex<MediaInfo>>,
@@ -108,6 +96,30 @@ impl MediaInfoWrapper {
         self.text_streams = None;
         self.other_streams = None;
         self.handle.lock().unwrap().close();
+    }
+
+    pub fn open_buffer_continue_goto(&mut self, data: &[u8]) -> usize {
+        self.handle.lock().unwrap().open_buffer_continue(data)
+    }
+
+    pub fn open_buffer_finalize(&mut self) -> usize {
+        self.handle.lock().unwrap().open_buffer_finalize()
+    }
+
+    pub fn open_buffer_init(&mut self, data_len: u64, data_offset: u64) -> usize {
+        self.handle.lock().unwrap().open_buffer_init(data_len, data_offset)
+    }
+
+    pub fn open_buffer_continue_goto_get(&mut self) -> usize {
+        self.handle.lock().unwrap().open_buffer_continue_goto_get()
+    }
+
+    pub fn open_buffer_continue_goto_get_lower(&mut self) -> usize {
+        self.handle.lock().unwrap().open_buffer_continue_goto_get_lower()
+    }
+
+    pub fn open_buffer_continue_goto_get_upper(&mut self) -> usize {
+        self.handle.lock().unwrap().open_buffer_continue_goto_get_upper()
     }
 
     fn wrap_streams(&mut self) {
@@ -208,45 +220,6 @@ impl MediaInfoWrapper {
 
     pub fn menu_streams(&self) -> Option<&Vec<MenuStream>> {
         self.menu_streams.as_ref()
-    }
-
-    /// Returns a comprehensive result containing all streams and media information
-    /// 
-    /// This method provides access to all available stream information in a single
-    /// structured format, including general information and all stream types.
-    /// 
-    /// # Returns
-    /// 
-    /// Returns `MediaInfoFullResult` containing:
-    /// - General stream information (format, duration, etc.)
-    /// - All video streams
-    /// - All audio streams  
-    /// - All text/subtitle streams
-    /// - All image streams
-    /// - All menu streams
-    /// - All other streams
-    /// 
-    /// # Errors
-    /// 
-    /// Returns an error if no media file has been opened or if there are issues
-    /// accessing the media information.
-    pub fn get_full_result(&self) -> Result<MediaInfoFullResult, String> {
-        if self.general_stream.handler.is_none() {
-            return Err("No media file opened".to_string());
-        }
-
-        Ok(MediaInfoFullResult {
-            general: GeneralStream {
-                stream_type: self.general_stream.stream_type,
-                handler: self.general_stream.handler.clone(),
-            },
-            video_streams: self.video_streams.clone().unwrap_or_default(),
-            audio_streams: self.audio_streams.clone().unwrap_or_default(),
-            text_streams: self.text_streams.clone().unwrap_or_default(),
-            image_streams: self.image_streams.clone().unwrap_or_default(),
-            menu_streams: self.menu_streams.clone().unwrap_or_default(),
-            other_streams: self.other_streams.clone().unwrap_or_default(),
-        })
     }
 
     /// Returns the full MediaInfo output as a formatted string
@@ -396,30 +369,6 @@ mod tests {
     }
 
     #[test]
-    fn can_get_full_result_structure() {
-        let sample_path = PathBuf::from("samples");
-        let filename = sample_path.join("sample.mp4");
-        let mut mw = MediaInfoWrapper::new();
-        mw.open(filename.as_path()).unwrap();
-
-        let full_result = mw.get_full_result().expect("Should get full result");
-
-        // Check general stream
-        assert_eq!("MPEG-4", full_result.general.format().unwrap());
-        assert_eq!("mp42", full_result.general.codec_id().unwrap());
-
-        // Check we have video streams
-        assert_eq!(1, full_result.video_streams.len());
-        assert_eq!("AVC", full_result.video_streams[0].format().unwrap());
-
-        // Check we have audio streams
-        assert_eq!(1, full_result.audio_streams.len());
-        assert_eq!("AAC", full_result.audio_streams[0].format().unwrap());
-
-        mw.close();
-    }
-
-    #[test]
     fn can_get_full_inform_json() {
         let sample_path = PathBuf::from("/Users/adambrowne/Downloads");
         let filename = sample_path.join("library_1b40173c-7d06-464f-bc87-bfd9ab806132.mp4");
@@ -451,14 +400,5 @@ mod tests {
         assert!(text_output.contains("Audio"));
 
         mw.close();
-    }
-
-    #[test]
-    fn full_result_fails_without_open_file() {
-        let mw = MediaInfoWrapper::new();
-        
-        let result = mw.get_full_result();
-        assert!(result.is_err());
-        assert_eq!("No media file opened", result.err().unwrap());
     }
 }

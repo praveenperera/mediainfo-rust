@@ -10,7 +10,6 @@ mod streams;
 mod convenience_api;
 
 pub type MediaInfoWrapper = convenience_api::MediaInfoWrapper;
-pub type MediaInfoFullResult = convenience_api::MediaInfoFullResult;
 pub type MediaInfo = ffi::MediaInfo;
 pub type MediaInfoResult<T> = ffi::MediaInfoResult<T>;
 pub type MediaInfoError = ffi::MediaInfoError;
