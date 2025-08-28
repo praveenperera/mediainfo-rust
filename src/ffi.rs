@@ -203,6 +203,7 @@ impl MediaInfo {
         unsafe { MediaInfo_Open_Buffer_Continue_GoTo_Get(self.handle) as usize }
     }
 
+    #[allow(arithmetic_overflow)]
     pub fn open_buffer_continue_goto_get_upper(&mut self) -> usize {
         unsafe { (MediaInfo_Open_Buffer_Continue_GoTo_Get(self.handle) >> 32) as usize }
     }

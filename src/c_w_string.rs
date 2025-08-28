@@ -30,12 +30,12 @@ impl CWcharString {
         let c_string_ptr =
             (&c_string.as_bytes_with_nul()[0] as *const u8) as *const c_char;
 
-        let size_needed = mbstowcs(ptr::null_mut(), c_string_ptr, 0) + 1;
+        let size_needed = unsafe { mbstowcs(ptr::null_mut(), c_string_ptr, 0) } + 1;
 
         let mut data = vec![0 as wchar; size_needed as usize];
         let wchar_ptr = &mut data.as_mut_slice()[0] as *mut wchar;
 
-        let n_chars = mbstowcs(wchar_ptr, c_string_ptr, size_needed);
+        let n_chars = unsafe { mbstowcs(wchar_ptr, c_string_ptr, size_needed) };
 
         CWcharString {
             data,
@@ -47,12 +47,12 @@ impl CWcharString {
         let c_string = CString::new(string);
         if c_string.is_err() { return Err( () ); }
 
-        Ok(CWcharString::from_c_string(&c_string.unwrap()))
+        Ok(unsafe { CWcharString::from_c_string(&c_string.unwrap()) })
     }
 
     pub unsafe fn from_path(in_path: &Path) -> Result<CWcharString, ()> {
         match in_path.to_str() {
-            Some(p) => CWcharString::from_str(p),
+            Some(p) => unsafe { CWcharString::from_str(p) },
             None => Err( () ),
         }
     }
@@ -62,12 +62,12 @@ impl CWcharString {
     }
 
     pub unsafe fn from_raw_to_c_string(raw: *const wchar) -> Result<CString, ()> {
-        let n_bytes = wcstombs(ptr::null_mut(), raw, 0);
+        let n_bytes = unsafe { wcstombs(ptr::null_mut(), raw, 0) };
 
         let mut data = vec![0 as u8; (n_bytes + 1) as usize];
         let data_ptr = (&mut data[0] as *mut u8) as *mut c_char;
 
-        wcstombs(data_ptr, raw, n_bytes + 1);
+        unsafe { wcstombs(data_ptr, raw, n_bytes + 1); }
         let c_str = CStr::from_bytes_with_nul(data.as_slice());
         if c_str.is_err() { return Err( () ); }
 
