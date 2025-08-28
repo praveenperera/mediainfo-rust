@@ -1,6 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
+use std::fs;
+use std::io::Write;
 
 fn main() {
     let target = env::var("TARGET").unwrap();
@@ -51,6 +53,9 @@ fn build_for_wasm() {
     
     println!("cargo:warning=MediaInfo compilation completed successfully");
     
+    // Generate embedded bridge with MediaInfo WASM
+    generate_embedded_bridge(&manifest_dir, &mediainfo_src);
+    
     // For Emscripten builds, link against the static libraries
     if target == "wasm32-unknown-emscripten" {
         let zenlib_path = mediainfo_src.join("ZenLib/Project/GNU/Library/.libs");
@@ -67,4 +72,93 @@ fn build_for_wasm() {
     } else {
         println!("cargo:warning=MediaInfo built for native or non-Emscripten target");
     }
+}
+
+fn generate_embedded_bridge(manifest_dir: &str, mediainfo_src: &PathBuf) {
+    let mediainfo_lib_dir = mediainfo_src.join("MediaInfoLib/Project/GNU/Library");
+    let wasm_js_path = mediainfo_lib_dir.join("MediaInfoWasm.js");
+    let wasm_file_path = mediainfo_lib_dir.join("MediaInfoWasm.wasm");
+    let bridge_template_path = PathBuf::from(manifest_dir).join("mediainfo-bridge.js");
+    
+    if !wasm_js_path.exists() || !wasm_file_path.exists() || !bridge_template_path.exists() {
+        println!("cargo:warning=Skipping embedded bridge generation - missing files");
+        return;
+    }
+    
+    // Read the MediaInfo JS and WASM files
+    let mediainfo_js = fs::read_to_string(&wasm_js_path).expect("Failed to read MediaInfoWasm.js");
+    let mediainfo_wasm = fs::read(&wasm_file_path).expect("Failed to read MediaInfoWasm.wasm");
+    let bridge_template = fs::read_to_string(&bridge_template_path).expect("Failed to read bridge template");
+    
+    // Convert WASM to base64
+    let wasm_base64 = base64_encode(&mediainfo_wasm);
+    
+    // Generate the embedded bridge
+    let embedded_bridge = generate_bridge_with_embedded_assets(&bridge_template, &mediainfo_js, &wasm_base64);
+    
+    // Write to output
+    let out_path = PathBuf::from(manifest_dir).join("mediainfo-bridge-embedded.js");
+    fs::write(&out_path, embedded_bridge).expect("Failed to write embedded bridge");
+    
+    println!("cargo:warning=Generated embedded bridge at {}", out_path.display());
+}
+
+fn base64_encode(data: &[u8]) -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut result = String::new();
+    
+    for chunk in data.chunks(3) {
+        let b1 = chunk[0] as u32;
+        let b2 = chunk.get(1).copied().unwrap_or(0) as u32;
+        let b3 = chunk.get(2).copied().unwrap_or(0) as u32;
+        
+        let combined = (b1 << 16) | (b2 << 8) | b3;
+        
+        result.push(CHARS[((combined >> 18) & 63) as usize] as char);
+        result.push(CHARS[((combined >> 12) & 63) as usize] as char);
+        result.push(if chunk.len() > 1 { CHARS[((combined >> 6) & 63) as usize] as char } else { '=' });
+        result.push(if chunk.len() > 2 { CHARS[(combined & 63) as usize] as char } else { '=' });
+    }
+    
+    result
+}
+
+fn generate_bridge_with_embedded_assets(bridge_template: &str, mediainfo_js: &str, wasm_base64: &str) -> String {
+    // Replace the import with embedded content
+    let embedded_content = format!(r#"
+// Embedded MediaInfo WASM and JS
+const MEDIAINFO_WASM_BASE64 = "{}";
+const MEDIAINFO_JS_CODE = `{}`;
+
+// Create MediaInfoLib from embedded content
+let MediaInfoLib;
+
+// Function to initialize MediaInfo from embedded assets
+async function initEmbeddedMediaInfo() {{
+    // Convert base64 to ArrayBuffer
+    const binaryString = atob(MEDIAINFO_WASM_BASE64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {{
+        bytes[i] = binaryString.charCodeAt(i);
+    }}
+    
+    // Create a module with the embedded WASM
+    const wasmModule = await WebAssembly.instantiate(bytes);
+    
+    // Execute MediaInfo JS code in context
+    const moduleFunc = new Function('Module', MEDIAINFO_JS_CODE + '; return Module;');
+    MediaInfoLib = moduleFunc(wasmModule);
+    
+    return MediaInfoLib;
+}}
+"#, wasm_base64, mediainfo_js.replace('`', r#"\`"#));
+
+    // Replace the import line with embedded content
+    bridge_template.replace(
+        r#"import MediaInfoLib from './mediainfo_src/MediaInfoLib/Project/GNU/Library/MediaInfoWasm.js';"#,
+        &embedded_content
+    ).replace(
+        "export async function initMediaInfo() {\n    if (!mediaInfoInitialized) {\n        try {\n            mediaInfoInstance = await MediaInfoLib();\n            mediaInfoInitialized = true;\n            return true;",
+        "export async function initMediaInfo() {\n    if (!mediaInfoInitialized) {\n        try {\n            if (!MediaInfoLib) {\n                await initEmbeddedMediaInfo();\n            }\n            mediaInfoInstance = await MediaInfoLib();\n            mediaInfoInitialized = true;\n            return true;"
+    )
 }
