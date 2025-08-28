@@ -37,3 +37,8 @@ features = [
   "FileReader",
   "Blob",
 ]
+
+# Features for different build targets
+[features]
+default = []
+emscripten-bridge = []  # Enable when building for dual-wasm with MediaInfo Emscripten bridge
