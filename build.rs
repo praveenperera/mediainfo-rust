@@ -23,7 +23,7 @@ fn build_for_native() {
 fn build_for_wasm() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let mediainfo_src = PathBuf::from(&manifest_dir).join("mediainfo_src");
-    let target = "wasm32-unknown-unknown";
+    let target = "wasm32-unknown-emscripten";
     
     println!("cargo:rerun-if-changed={}", mediainfo_src.display());
     println!("cargo:rerun-if-changed={}", mediainfo_src.join("SO_Compile.sh").display());
@@ -53,7 +53,7 @@ fn build_for_wasm() {
     println!("cargo:warning=MediaInfo compilation completed successfully");
     
     // Generate embedded web worker bridge
-    generate_embedded_worker_bridge(&manifest_dir, &mediainfo_src);
+    // generate_embedded_worker_bridge(&manifest_dir, &mediainfo_src);
     
     // For Emscripten builds, link against the static libraries
         let zenlib_path = mediainfo_src.join("ZenLib/Project/GNU/Library/.libs");
