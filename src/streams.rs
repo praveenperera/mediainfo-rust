@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use ffi::{MediaInfo, MediaInfoError, MediaInfoInfo, MediaInfoResult, MediaInfoStream};
+use crate::ffi::{MediaInfo, MediaInfoError, MediaInfoInfo, MediaInfoResult, MediaInfoStream};
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

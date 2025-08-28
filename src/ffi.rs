@@ -9,12 +9,12 @@ type uint64 = u64;
 type uint8  = u8;
 type size_t = libc::size_t;
 type wchar  = libc::wchar_t;
-type c_char = libc::c_char;
-type c_int  = libc::c_int;
+type c_char = std::ffi::c_char;
+type c_int  = std::ffi::c_int;
 type void   = libc::c_void;
 
-type c_MediaInfoStream = libc::c_int;
-type c_MediaInfoInfo   = libc::c_int;
+type c_MediaInfoStream = std::ffi::c_int;
+type c_MediaInfoInfo   = std::ffi::c_int;
 
 const LC_CTYPE: c_int = 0;
 
@@ -32,7 +32,7 @@ pub enum MediaInfoStream {
 
 impl MediaInfoStream {
     fn c_compatible(self) -> c_MediaInfoStream {
-        self as libc::c_int
+        self as std::ffi::c_int
     }
 
     pub fn variants() -> Vec<MediaInfoStream> {
@@ -57,7 +57,7 @@ pub enum MediaInfoInfo {
 
 impl MediaInfoInfo {
     fn c_compatible(self) -> c_MediaInfoInfo {
-        self as libc::c_int
+        self as std::ffi::c_int
     }
 }
 

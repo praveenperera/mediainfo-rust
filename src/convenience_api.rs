@@ -1,5 +1,5 @@
-use ffi::{MediaInfo, MediaInfoResult, MediaInfoStream};
-use streams::{
+use crate::ffi::{MediaInfo, MediaInfoResult, MediaInfoStream};
+use crate::streams::{
     AudioStream, GeneralStream, ImageStream, MenuStream, OtherStream, TextStream, VideoStream,
 };
 

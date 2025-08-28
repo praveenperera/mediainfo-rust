@@ -21,7 +21,7 @@ use std::ffi::CString;
 
 type size_t = libc::size_t;
 type wchar  = libc::wchar_t;
-type c_char = libc::c_char;
+type c_char = std::ffi::c_char;
 
 pub struct CWcharString {
     pub data: Vec<wchar>,
@@ -78,7 +78,7 @@ impl CWcharString {
     }
 }
 
-extern "C" {
+unsafe extern "C" {
     fn mbstowcs(__pwcs: *mut wchar, __s: *const c_char, __n: size_t) -> size_t;
     fn wcstombs(__s: *mut c_char, __pwcs: *const wchar, __n: size_t) -> size_t;
 }
