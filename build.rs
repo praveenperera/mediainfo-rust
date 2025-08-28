@@ -22,7 +22,6 @@ fn build_for_wasm() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let mediainfo_src = PathBuf::from(&manifest_dir).join("mediainfo_src");
     
-    println!("cargo:rerun-if-changed={}/SO_Compile.sh", mediainfo_src.display());
     println!("cargo:rerun-if-changed={}", mediainfo_src.display());
     
     // Link against the compiled MediaInfo libraries
@@ -33,8 +32,9 @@ fn build_for_wasm() {
     println!("cargo:rustc-link-search=native={}", zenlib_path.display());
     
     // Link to the actual static library files (without lib prefix for -l flag)
-    println!("cargo:rustc-link-lib=static=zen");
+    // Note: mediainfo depends on zen, so zen must come after mediainfo
     println!("cargo:rustc-link-lib=static=mediainfo");
+    println!("cargo:rustc-link-lib=static=zen");
     
     // Add WASM-specific linker flags
     println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
