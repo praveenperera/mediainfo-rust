@@ -410,7 +410,7 @@ use wasm_bindgen::prelude::*;
 use std::ffi::CStr;
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(module = "../mediainfo-bridge.js")]
+#[wasm_bindgen(module = "/mediainfo-bridge.js")]
 unsafe extern "C" {
     #[wasm_bindgen(js_name = mediainfo_new)]
     fn MediaInfo_New() -> u32;
