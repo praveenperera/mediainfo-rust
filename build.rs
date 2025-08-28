@@ -65,27 +65,27 @@ fn build_for_wasm() {
     println!("cargo:rustc-link-lib=static=mediainfo");
     println!("cargo:rustc-link-lib=static=zen");
     
-    // WASM-specific linker flags for proper symbol resolution
-    println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
+    // The key insight: the "env" import issue comes from wasm-bindgen/wasm-pack
+    // These flags ensure static linking and prevent env imports
+    
+    // Tell the consuming crate's build to use these Emscripten flags
+    // This is critical for preventing the env import issue
+    println!("cargo:rustc-link-arg=-sSTANDALONE_WASM=1");
+    println!("cargo:rustc-link-arg=-sNO_FILESYSTEM=1"); 
     println!("cargo:rustc-link-arg=-sMALLOC=emmalloc");
-    println!("cargo:rustc-link-arg=-sASSERTIONS=0");
-    println!("cargo:rustc-link-arg=-sNO_FILESYSTEM=1");
-    println!("cargo:rustc-link-arg=-sINITIAL_MEMORY=33554432");
-    
-    // Export MediaInfo functions so they don't get imported from 'env'
-    // This is crucial for fixing the env import issue
-    println!("cargo:rustc-link-arg=-sEXPORTED_FUNCTIONS=_MediaInfo_New,_MediaInfo_Delete,_MediaInfo_Open_Buffer_Init,_MediaInfo_Open_Buffer_Continue,_MediaInfo_Open_Buffer_Continue_GoTo_Get,_MediaInfo_Open_Buffer_Finalize,_MediaInfo_Open,_MediaInfo_Close,_MediaInfo_Option,_MediaInfo_Inform,_MediaInfo_Count_Get,_MediaInfo_Get");
-    
-    // Don't error on undefined symbols - let them be resolved at runtime if needed
+    println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
     println!("cargo:rustc-link-arg=-sERROR_ON_UNDEFINED_SYMBOLS=0");
     
-    // Ensure we're linking against the system malloc implementation
-    println!("cargo:rustc-link-arg=-sMALLOC=emmalloc");
-    
-    // Additional flags to prevent env imports
+    // Most importantly: prevent automatic env imports by disabling them
+    println!("cargo:rustc-link-arg=-sIMPORT_MEMORY=0");
     println!("cargo:rustc-link-arg=-sEXPORT_ALL=0");
-    println!("cargo:rustc-link-arg=-sEXPORT_BINDINGS=0");
     
-    // Ensure proper C++ standard library linking for WASM
+    // Ensure we don't depend on JavaScript environment
+    println!("cargo:rustc-link-arg=-sENVIRONMENT=web,worker");
+    
+    // Link C++ standard library statically to avoid runtime dependencies
     println!("cargo:rustc-link-arg=-lc++");
+    
+    // Set a flag that consuming crates can check to configure themselves properly
+    println!("cargo:metadata=requires_standalone_wasm=1");
 }
