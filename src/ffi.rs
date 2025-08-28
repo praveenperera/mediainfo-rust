@@ -148,12 +148,8 @@ impl MediaInfo {
             
             #[cfg(target_arch = "wasm32")]
             {
-                let param_c_str = CString::new(parameter).unwrap();
-                let value_c_str = CString::new(value).unwrap();
-                let ptr = MediaInfo_Option(self.handle as u32, 
-                                         param_c_str.as_ptr(),
-                                         value_c_str.as_ptr());
-                return wasm_string_to_rust(ptr);
+                let result = MediaInfo_Option(self.handle as u32, parameter, value);
+                return Ok(result);
             }
             
             #[cfg(not(target_arch = "wasm32"))]
@@ -181,8 +177,8 @@ impl MediaInfo {
             
             #[cfg(target_arch = "wasm32")]
             {
-                let ptr = MediaInfo_Inform(self.handle as u32);
-                return wasm_string_to_rust(ptr);
+                let result = MediaInfo_Inform(self.handle as u32);
+                return Ok(result);
             }
             
             #[cfg(not(target_arch = "wasm32"))]
@@ -232,14 +228,13 @@ impl MediaInfo {
             
             #[cfg(target_arch = "wasm32")]
             {
-                let param_c_str = CString::new(parameter).unwrap();
-                let ptr = MediaInfo_Get(self.handle as u32, 
-                                      info_stream.c_compatible(),
-                                      stream_number,
-                                      param_c_str.as_ptr(),
-                                      info_kind.c_compatible(),
-                                      search_kind.c_compatible());
-                return wasm_string_to_rust(ptr);
+                let result = MediaInfo_Get(self.handle as u32, 
+                                         info_stream.c_compatible(),
+                                         stream_number,
+                                         parameter,
+                                         info_kind.c_compatible(),
+                                         search_kind.c_compatible());
+                return Ok(result);
             }
             
             #[cfg(not(target_arch = "wasm32"))]
@@ -276,19 +271,20 @@ impl MediaInfo {
 
     pub fn open_buffer_continue(&mut self, data: &[u8]) -> usize {
         unsafe {
-            let bytes_ptr = &data[0] as *const uint8;
-            
             #[cfg(not(target_arch = "wasm32"))]
-            let result = MediaInfo_Open_Buffer_Continue(self.handle,
-                                                        bytes_ptr,
-                                                        data.len() as size_t);
+            {
+                let bytes_ptr = &data[0] as *const uint8;
+                let result = MediaInfo_Open_Buffer_Continue(self.handle,
+                                                            bytes_ptr,
+                                                            data.len() as size_t);
+                result as usize
+            }
             
             #[cfg(target_arch = "wasm32")]
-            let result = MediaInfo_Open_Buffer_Continue(self.handle as u32,
-                                                        bytes_ptr,
-                                                        data.len());
-            
-            result as usize
+            {
+                let result = MediaInfo_Open_Buffer_Continue(self.handle as u32, data);
+                result as usize
+            }
         }
     }
 
@@ -426,7 +422,7 @@ unsafe extern "C" {
     fn MediaInfo_Open_Buffer_Init(handle: u32, buffer_size: u64, offset: u64) -> u32;
     
     #[wasm_bindgen(js_name = mediainfo_open_buffer_continue)]
-    fn MediaInfo_Open_Buffer_Continue(handle: u32, bytes: *const u8, length: usize) -> u32;
+    fn MediaInfo_Open_Buffer_Continue(handle: u32, bytes: &[u8]) -> u32;
     
     #[wasm_bindgen(js_name = mediainfo_open_buffer_continue_goto_get)]
     fn MediaInfo_Open_Buffer_Continue_GoTo_Get(handle: u32) -> u32;
@@ -445,34 +441,15 @@ unsafe extern "C" {
     
     #[wasm_bindgen(js_name = mediainfo_get)]
     fn MediaInfo_Get(handle: u32, info_stream: c_MediaInfoStream, stream_number: usize, 
-                     parameter: *const c_char, info_kind: c_MediaInfoInfo, search_kind: c_MediaInfoInfo) -> u32;
+                     parameter: &str, info_kind: c_MediaInfoInfo, search_kind: c_MediaInfoInfo) -> String;
     
     #[wasm_bindgen(js_name = mediainfo_inform)]
-    fn MediaInfo_Inform(handle: u32) -> u32;
+    fn MediaInfo_Inform(handle: u32) -> String;
     
     #[wasm_bindgen(js_name = mediainfo_option)]
-    fn MediaInfo_Option(handle: u32, parameter: *const c_char, value: *const c_char) -> u32;
+    fn MediaInfo_Option(handle: u32, parameter: &str, value: &str) -> String;
     
     #[wasm_bindgen(js_name = mediainfo_free_string)]
     fn MediaInfo_Free_String(ptr: u32);
 }
 
-#[cfg(target_arch = "wasm32")]
-unsafe fn wasm_string_to_rust(ptr: u32) -> Result<String, MediaInfoError> {
-    if ptr == 0 {
-        return Err(MediaInfoError::CToRustError);
-    }
-    
-    // Convert the pointer to a *const c_char and read the C string
-    let c_str = CStr::from_ptr(ptr as *const c_char);
-    let result = c_str.to_string_lossy().into_owned();
-    
-    // Free the string in JS
-    MediaInfo_Free_String(ptr);
-    
-    if result.is_empty() {
-        Err(MediaInfoError::ZeroLengthResultError)
-    } else {
-        Ok(result)
-    }
-}
