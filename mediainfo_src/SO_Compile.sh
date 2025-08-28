@@ -52,7 +52,7 @@ elif [ "$(expr substr $OS 1 5)" = "Linux" ]; then
 fi
 
 # Check for WASM target architecture from environment or explicit flag
-if [ "$1" = "--emscripten-lib" ] || [ "$TARGET" = "wasm32-unknown-emscripten" ] || [ "$TARGET" = "wasm32-wasi" ] || [ "$TARGET" = "wasm32-unknown-unknown" ]; then
+if [ "$1" = "--emscripten-lib" ] || [ "$TARGET" = "wasm32-unknown-emscripten" ] || [ "$TARGET" = "wasm32-wasi" ]; then
     if [ "$1" = "--emscripten-lib" ]; then
         shift
     fi
@@ -105,6 +105,64 @@ if [ "$1" = "--emscripten-lib" ] || [ "$TARGET" = "wasm32-unknown-emscripten" ] 
                            -DMEDIAINFO_IBIUSAGE_NO \
                            -DMEDIAINFO_TINYXML2_NO"
     echo "Detected WASM target: $TARGET - configuring for Emscripten build"
+elif [ "$TARGET" = "wasm32-unknown-unknown" ]; then
+    OS="wasm-bindgen"
+    Make="make"
+    
+    # Use clang with WASM target for wasm-bindgen compatibility
+    CC="clang --target=wasm32-unknown-unknown"
+    CXX="clang++ --target=wasm32-unknown-unknown"
+    
+    CFLAGS="$CFLAGS -Os -fno-exceptions -fno-rtti"
+    CXXFLAGS="$CXXFLAGS -Os -fno-exceptions -fno-rtti -std=c++17"
+    
+    # Configure flags for minimal MediaInfo build compatible with wasm-bindgen
+    ZenLib_Options="--host=wasm32-unknown-unknown --disable-unicode --enable-static --disable-shared --disable-dll"
+    MediaInfoLib_CXXFLAGS="-I ../../../Source -I ../../../../ZenLib/Source \
+                           -DMEDIAINFO_MINIMAL_YES \
+                           -DMEDIAINFO_EXPORT_YES \
+                           -DMEDIAINFO_SEEK_YES \
+                           -DMEDIAINFO_READER_NO \
+                           -DMEDIAINFO_REFERENCES_NO \
+                           -DMEDIAINFO_GRAPH_NO \
+                           -DMEDIAINFO_GRAPHVIZ_NO \
+                           -DMEDIAINFO_ARCHIVE_NO \
+                           -DMEDIAINFO_FIXITY_NO \
+                           -DMEDIAINFO_CSV_NO \
+                           -DMEDIAINFO_CUSTOM_NO \
+                           -DMEDIAINFO_EBUCORE_NO \
+                           -DMEDIAINFO_FIMS_NO \
+                           -DMEDIAINFO_MPEG7_NO \
+                           -DMEDIAINFO_PBCORE_NO \
+                           -DMEDIAINFO_REVTMD_NO \
+                           -DMEDIAINFO_NISO_NO \
+                           -DMEDIAINFO_MINIMIZESIZE \
+                           -DMEDIAINFO_TRACE_NO \
+                           -DMEDIAINFO_FILTER_NO \
+                           -DMEDIAINFO_DUPLICATE_NO \
+                           -DMEDIAINFO_MACROBLOCKS_NO \
+                           -DMEDIAINFO_NEXTPACKET_NO \
+                           -DMEDIAINFO_EVENTS_NO \
+                           -DMEDIAINFO_DEMUX_NO \
+                           -DMEDIAINFO_IBI_NO \
+                           -DMEDIAINFO_CONFORMANCE_YES \
+                           -DMEDIAINFO_DIRECTORY_NO \
+                           -DMEDIAINFO_LIBCURL_NO \
+                           -DMEDIAINFO_LIBMMS_NO \
+                           -DMEDIAINFO_READTHREAD_NO \
+                           -DMEDIAINFO_MD5_NO \
+                           -DMEDIAINFO_SHA1_NO \
+                           -DMEDIAINFO_SHA2_NO \
+                           -DMEDIAINFO_AES_NO \
+                           -DMEDIAINFO_JNI_NO \
+                           -DMEDIAINFO_TRACE_FFV1CONTENT_NO \
+                           -DMEDIAINFO_COMPRESS \
+                           -DMEDIAINFO_DECODE_NO \
+                           -DMEDIAINFO_IBIUSAGE_NO \
+                           -DMEDIAINFO_TINYXML2_NO \
+                           -D__WASM__ \
+                           -DUNIX"
+    echo "Detected WASM target: $TARGET - configuring for wasm-bindgen build"
 fi
 
 ##################################################################
@@ -117,6 +175,8 @@ if test -e ZenLib/Project/GNU/Library/configure; then
 
     if [ "$OS" = "emscripten" ]; then
         emconfigure ./configure --host=le32-unknown-nacl --disable-unicode --enable-static --disable-shared --disable-dll CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS"
+    elif [ "$OS" = "wasm-bindgen" ]; then
+        ./configure $ZenLib_Options CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS"
     else
         ./configure --enable-static --disable-shared $ZenLib_Options $*
     fi
@@ -148,6 +208,8 @@ if test -e MediaInfoLib/Project/GNU/Library/configure; then
     chmod +x configure
     if [ "$OS" = "emscripten" ]; then
         emconfigure ./configure --host=le32-unknown-nacl --enable-static --disable-shared --disable-dll $* CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS $MediaInfoLib_CXXFLAGS"
+    elif [ "$OS" = "wasm-bindgen" ]; then
+        ./configure --host=wasm32-unknown-unknown --enable-static --disable-shared --disable-dll CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS $MediaInfoLib_CXXFLAGS" $*
     else
         ./configure --enable-staticlibs --enable-shared --disable-static --with-libcurl=runtime --with-graphviz=runtime $MediaInfoLib_Options $*
     fi
@@ -171,7 +233,7 @@ fi
 cd $Home
 
 ##################################################################
-# JavaScript Interface
+# JavaScript Interface (only for Emscripten builds)
 if [ "$OS" = "emscripten" ]; then
     cd MediaInfoLib/Project/GNU/Library/
     em++ $CXXFLAGS $MediaInfoLib_CXXFLAGS --bind -c ../../../Source/MediaInfoDLL/MediaInfoJS.cpp -o MediaInfoJS.o

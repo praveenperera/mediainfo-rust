@@ -26,7 +26,7 @@ fn build_for_wasm() {
     println!("cargo:rerun-if-changed={}", mediainfo_src.display());
     println!("cargo:rerun-if-changed={}", mediainfo_src.join("SO_Compile.sh").display());
     
-    // Set TARGET environment variable for the SO_Compile.sh script
+    // Default to wasm-bindgen builds (wasm32-unknown-unknown)
     let target_value = "wasm32-unknown-unknown";
     unsafe {
         env::set_var("TARGET", target_value);
@@ -65,27 +65,7 @@ fn build_for_wasm() {
     println!("cargo:rustc-link-lib=static=mediainfo");
     println!("cargo:rustc-link-lib=static=zen");
     
-    // The key insight: the "env" import issue comes from wasm-bindgen/wasm-pack
-    // These flags ensure static linking and prevent env imports
-    
-    // Tell the consuming crate's build to use these Emscripten flags
-    // This is critical for preventing the env import issue
-    println!("cargo:rustc-link-arg=-sSTANDALONE_WASM=1");
-    println!("cargo:rustc-link-arg=-sNO_FILESYSTEM=1"); 
-    println!("cargo:rustc-link-arg=-sMALLOC=emmalloc");
-    println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
-    println!("cargo:rustc-link-arg=-sERROR_ON_UNDEFINED_SYMBOLS=0");
-    
-    // Most importantly: prevent automatic env imports by disabling them
-    println!("cargo:rustc-link-arg=-sIMPORT_MEMORY=0");
-    println!("cargo:rustc-link-arg=-sEXPORT_ALL=0");
-    
-    // Ensure we don't depend on JavaScript environment
-    println!("cargo:rustc-link-arg=-sENVIRONMENT=web,worker");
-    
-    // Link C++ standard library statically to avoid runtime dependencies
-    println!("cargo:rustc-link-arg=-lc++");
-    
-    // Set a flag that consuming crates can check to configure themselves properly
-    println!("cargo:metadata=requires_standalone_wasm=1");
+    // For wasm-bindgen builds, we don't need Emscripten-specific flags
+    // The libraries will be statically linked and compatible with wasm-bindgen
+    println!("cargo:warning=MediaInfo built for wasm-bindgen compatibility");
 }
