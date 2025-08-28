@@ -28,8 +28,19 @@ fn build_for_wasm() {
     let mediainfo_lib_path = mediainfo_src.join("MediaInfoLib/Project/GNU/Library/.libs");
     let zenlib_path = mediainfo_src.join("ZenLib/Project/GNU/Library/.libs");
     
-    println!("cargo:rustc-link-search=native={}", mediainfo_lib_path.display());
-    println!("cargo:rustc-link-search=native={}", zenlib_path.display());
+    if mediainfo_lib_path.exists() {
+        println!("cargo:warning=Found MediaInfo library path: {}", mediainfo_lib_path.display());
+        println!("cargo:rustc-link-search=native={}", mediainfo_lib_path.display());
+    } else {
+        println!("cargo:warning=MediaInfo library path not found: {}", mediainfo_lib_path.display());
+    }
+    
+    if zenlib_path.exists() {
+        println!("cargo:warning=Found ZenLib library path: {}", zenlib_path.display());
+        println!("cargo:rustc-link-search=native={}", zenlib_path.display());
+    } else {
+        println!("cargo:warning=ZenLib library path not found: {}", zenlib_path.display());
+    }
     
     // Link to the actual static library files (without lib prefix for -l flag)
     // Note: mediainfo depends on zen, so zen must come after mediainfo
