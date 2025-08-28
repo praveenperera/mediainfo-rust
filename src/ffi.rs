@@ -1,7 +1,7 @@
 #![allow(non_camel_case_types)]
 extern crate libc;
 
-use ::c_w_string::CWcharString;
+use crate::c_w_string::CWcharString;
 use std::ffi::CString;
 use std::path::Path;
 
@@ -241,7 +241,7 @@ pub type MediaInfoResult<T> = Result<T, MediaInfoError>;
 // NOTE(erick): This was needed in rust 1.6, keeping
 // here for historical purpose.
 // #[link(name="mediainfo")]
-extern "C" {
+unsafe extern "C" {
     fn MediaInfo_New() -> *mut void;
 
     fn MediaInfo_Delete(handle: *mut void);
