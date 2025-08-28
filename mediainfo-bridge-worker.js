@@ -6,11 +6,24 @@ let workerInitialized = false;
 let requestId = 1;
 let responseCache = new Map();
 
+// SharedArrayBuffer for atomic synchronization
+let syncBuffer = null;
+let syncView = null;
+const SYNC_BUFFER_SIZE = 1024; // Size in 32-bit integers
+const RESPONSE_READY_INDEX = 0; // Index for response ready flag
+const REQUEST_ID_INDEX = 1; // Index for current request ID
+
 // Initialize the MediaInfo worker
 export function initMediaInfo() {
     if (workerInitialized) return true;
     
     try {
+        // Initialize SharedArrayBuffer for synchronization
+        syncBuffer = new SharedArrayBuffer(SYNC_BUFFER_SIZE * 4); // 4 bytes per 32-bit integer
+        syncView = new Int32Array(syncBuffer);
+        Atomics.store(syncView, RESPONSE_READY_INDEX, 0);
+        Atomics.store(syncView, REQUEST_ID_INDEX, 0);
+        
         // Create worker from embedded code
         const workerCode = getEmbeddedWorkerCode();
         const blob = new Blob([workerCode], { type: 'application/javascript' });
@@ -22,12 +35,22 @@ export function initMediaInfo() {
         worker.onmessage = (event) => {
             const { id, success, result, error } = event.data;
             responseCache.set(id, { success, result, error });
+            
+            // Signal that response is ready using atomics
+            Atomics.store(syncView, REQUEST_ID_INDEX, id);
+            Atomics.store(syncView, RESPONSE_READY_INDEX, 1);
+            Atomics.notify(syncView, RESPONSE_READY_INDEX, 1);
         };
         
         // Handle worker errors
         worker.onerror = (error) => {
             console.error('MediaInfo worker error:', error);
         };
+
+        console.log("worker is h", worker)
+        
+        // Send the SharedArrayBuffer to the worker
+        worker.postMessage({ type: 'init_sync', syncBuffer });
         
         // Initialize MediaInfo in the worker (synchronously)
         const initResult = sendWorkerMessageSync('init', {});
@@ -49,28 +72,41 @@ export function initMediaInfo() {
 
 // Send a message to the worker and wait synchronously for response
 function sendWorkerMessageSync(method, params) {
-    if (!worker) {
+    if (!worker || !syncView) {
         return { success: false, error: 'Worker not initialized' };
     }
     
     const id = requestId++;
+    
+    // Reset the response ready flag before sending the request
+    Atomics.store(syncView, RESPONSE_READY_INDEX, 0);
+    
+    // Send the message to the worker
     worker.postMessage({ id, method, params });
     
-    // Busy wait for response (this works in WASM single-threaded environment)
-    const maxWait = 10000; // 10 seconds
-    const startTime = Date.now();
+    // Use Atomics.wait to block until response is ready
+    // This avoids the busy-wait loop and potential deadlocks
+    const maxWaitMs = 60000; // 60 seconds timeout
+    const result = Atomics.wait(syncView, RESPONSE_READY_INDEX, 0, maxWaitMs);
     
-    while (!responseCache.has(id)) {
-        if (Date.now() - startTime > maxWait) {
-            return { success: false, error: 'Request timeout' };
-        }
-        
-        // Allow other tasks to run
-        // In a real environment, this would be replaced with proper sync/await handling
-        continue;
+    if (result === 'timed-out') {
+        return { success: false, error: 'Request timeout' };
     }
     
+    if (result === 'not-equal') {
+        // Response is ready, check if it's for our request ID
+        const responseId = Atomics.load(syncView, REQUEST_ID_INDEX);
+        if (responseId !== id) {
+            return { success: false, error: 'Response ID mismatch' };
+        }
+    }
+    
+    // Get the cached response
     const response = responseCache.get(id);
+    if (!response) {
+        return { success: false, error: 'Response not found in cache' };
+    }
+    
     responseCache.delete(id);
     return response;
 }
