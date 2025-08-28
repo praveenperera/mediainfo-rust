@@ -128,7 +128,7 @@ fn generate_embedded_worker_bridge(manifest_dir: &str, mediainfo_src: &PathBuf) 
     // Generate the main bridge with embedded worker
     let embedded_bridge = bridge_template.replace(
         "function getEmbeddedWorkerCode() {\n    // EMBEDDED_WORKER_CODE_PLACEHOLDER\n    throw new Error('Worker code not embedded. This should be replaced during build.');\n}",
-        &format!("function getEmbeddedWorkerCode() {{\n    return `{}`;\n}}", embedded_worker_code.replace('`', r#"\`"#).replace("\\", "\\\\"))
+        &format!("function getEmbeddedWorkerCode() {{\n    return `{}`;\n}}", embedded_worker_code.replace("\\", "\\\\").replace('`', r#"\`"#).replace("${", r#"\${"#))
     );
     
     // Write the embedded worker bridge
@@ -165,7 +165,7 @@ async function initEmbeddedMediaInfo() {{
     
     return MediaInfoLib;
 }}
-"#, wasm_base64, mediainfo_js.replace('`', r#"\`"#))
+"#, wasm_base64, mediainfo_js.replace("\\", "\\\\").replace('`', r#"\`"#).replace("${", r#"\${"#))
 }
 
 fn generate_bridge_with_embedded_assets(bridge_template: &str, mediainfo_js: &str, wasm_base64: &str) -> String {
@@ -196,7 +196,7 @@ async function initEmbeddedMediaInfo() {{
     
     return MediaInfoLib;
 }}
-"#, wasm_base64, mediainfo_js.replace('`', r#"\`"#));
+"#, wasm_base64, mediainfo_js.replace("\\", "\\\\").replace('`', r#"\`"#).replace("${", r#"\${"#));
 
     // Replace the import line with embedded content
     bridge_template.replace(
