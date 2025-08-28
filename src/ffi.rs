@@ -1,6 +1,3 @@
-#![allow(non_camel_case_types)]
-extern crate libc;
-
 use crate::c_w_string::CWcharString;
 use std::ffi::CString;
 use std::path::Path;

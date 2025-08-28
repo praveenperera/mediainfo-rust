@@ -10,9 +10,6 @@
 // between efficiency and safety. It would not have to be this way
 // if C had a better string implementation.
 
-#![allow(non_camel_case_types)]
-extern crate libc;
-
 use std::ptr;
 use std::path::Path;
 
