@@ -16,8 +16,8 @@ use std::path::Path;
 use std::ffi::CStr;
 use std::ffi::CString;
 
-type size_t = libc::size_t;
-type wchar  = libc::wchar_t;
+type size_t = usize;
+type wchar  = std::ffi::c_int;
 type c_char = std::ffi::c_char;
 
 pub struct CWcharString {

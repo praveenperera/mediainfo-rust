@@ -4,8 +4,8 @@ use std::path::Path;
 
 type uint64 = u64;
 type uint8  = u8;
-type size_t = libc::size_t;
-type wchar  = libc::wchar_t;
+type size_t = usize;
+type wchar  = std::ffi::c_int;
 type c_char = std::ffi::c_char;
 type c_int  = std::ffi::c_int;
 type void   = libc::c_void;
