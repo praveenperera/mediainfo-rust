@@ -56,8 +56,8 @@ fn build_for_wasm() {
     println!("cargo:rustc-link-search=native={}", zenlib_path.display());
     
     // Link to the actual static library files (without lib prefix for -l flag)
-    println!("cargo:rustc-link-lib=static=libmediainfo");
-    println!("cargo:rustc-link-lib=static=libzen");
+    println!("cargo:rustc-link-lib=static=zen");
+    println!("cargo:rustc-link-lib=static=mediainfo");
     
     // Add WASM-specific linker flags
     println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
