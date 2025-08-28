@@ -56,6 +56,11 @@ if [ "$1" = "--emscripten-lib" ] || [ "$TARGET" = "wasm32-unknown-emscripten" ] 
     if [ "$1" = "--emscripten-lib" ]; then
         shift
     fi
+    # Create o.txt file in current directory
+    echo "WASM target detected: $TARGET" > o.txt
+    echo "Setting up Emscripten build configuration" >> o.txt
+    echo "Build timestamp: $(date)" >> o.txt
+    
     OS="emscripten"
     Make="emmake make"
     CFLAGS="$CFLAGS -Oz -s EMBIND_STD_STRING_IS_UTF8=1"
