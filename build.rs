@@ -53,7 +53,7 @@ fn build_for_wasm() {
     println!("cargo:warning=MediaInfo compilation completed successfully");
     
     // Generate embedded web worker bridge
-    // generate_embedded_worker_bridge(&manifest_dir, &mediainfo_src);
+    generate_embedded_worker_bridge(&manifest_dir, &mediainfo_src);
     
     // For Emscripten builds, link against the static libraries
         let zenlib_path = mediainfo_src.join("ZenLib/Project/GNU/Library/.libs");
