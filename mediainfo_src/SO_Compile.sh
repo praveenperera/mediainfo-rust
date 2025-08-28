@@ -117,8 +117,10 @@ elif [ "$TARGET" = "wasm32-unknown-unknown" ]; then
     CXXFLAGS="$CXXFLAGS -Os -fno-exceptions -fno-rtti -std=c++17"
     
     # Configure flags for minimal MediaInfo build compatible with wasm-bindgen
-    ZenLib_Options="--host=wasm32-unknown-unknown --disable-unicode --enable-static --disable-shared --disable-dll"
+    # Note: We enable unicode for DLL interface but disable wide character strings in ZenLib
+    ZenLib_Options="--host=wasm32-unknown-unknown --enable-unicode --enable-static --disable-shared --disable-dll"
     MediaInfoLib_CXXFLAGS="-I ../../../Source -I ../../../../ZenLib/Source \
+                           -DUNICODE \
                            -DMEDIAINFO_MINIMAL_YES \
                            -DMEDIAINFO_EXPORT_YES \
                            -DMEDIAINFO_SEEK_YES \
@@ -160,6 +162,8 @@ elif [ "$TARGET" = "wasm32-unknown-unknown" ]; then
                            -DMEDIAINFO_DECODE_NO \
                            -DMEDIAINFO_IBIUSAGE_NO \
                            -DMEDIAINFO_TINYXML2_NO \
+                           -DMEDIAINFO_STATIC \
+                           -DMEDIAINFODLL_EXPORTS \
                            -D__WASM__ \
                            -DUNIX"
     echo "Detected WASM target: $TARGET - configuring for wasm-bindgen build"
@@ -231,6 +235,33 @@ else
     exit
 fi
 cd $Home
+
+##################################################################
+# MediaInfoDLL Interface (for wasm-bindgen builds)
+if [ "$OS" = "wasm-bindgen" ]; then
+    echo "Building MediaInfoDLL interface for wasm-bindgen"
+    cd MediaInfoLib/Project/GNU/Library/
+    
+    # Compile MediaInfoDLL.cpp specifically for WASM
+    $CXX $CXXFLAGS $MediaInfoLib_CXXFLAGS \
+        -c ../../../Source/MediaInfoDLL/MediaInfoDLL.cpp \
+        -o MediaInfoDLL.o
+    
+    # Create a static library that includes the DLL interface
+    ar rcs libmediainfodll.a MediaInfoDLL.o
+    
+    if test -e libmediainfodll.a; then
+        echo "MediaInfoDLL interface compiled for wasm-bindgen"
+        # Copy to .libs for consistency
+        mkdir -p .libs
+        cp libmediainfodll.a .libs/
+    else
+        echo "Problem compiling MediaInfoDLL interface"
+        exit 1
+    fi
+    
+    cd $Home
+fi
 
 ##################################################################
 # JavaScript Interface (only for Emscripten builds)
