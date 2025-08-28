@@ -9,17 +9,10 @@ mod ffi;
 mod streams;
 mod convenience_api;
 
-#[cfg(target_arch = "wasm32")]
-pub mod wasm_bridge;
-
 pub type MediaInfoWrapper = convenience_api::MediaInfoWrapper;
 pub type MediaInfo = ffi::MediaInfo;
 pub type MediaInfoResult<T> = ffi::MediaInfoResult<T>;
 pub type MediaInfoError = ffi::MediaInfoError;
-
-#[cfg(target_arch = "wasm32")]
-pub use wasm_bridge::{MediaInfoHandle, StreamKind};
-
 
 #[cfg(test)]
 mod tests {

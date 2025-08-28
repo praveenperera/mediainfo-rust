@@ -63,16 +63,6 @@ fn build_for_wasm() {
         println!("cargo:rustc-link-lib=static=mediainfo");
         println!("cargo:rustc-link-lib=static=zen");
         
-        // Emscripten-specific flags for single WASM module
-        println!("cargo:rustc-link-arg=-sSTANDALONE_WASM=1");
-        println!("cargo:rustc-link-arg=-sNO_FILESYSTEM=1");
-        println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
-        println!("cargo:rustc-link-arg=-sMALLOC=emmalloc");
-        
-        // This is the key: export the MediaInfo functions so they're available in the WASM module
-        // instead of being imported from env
-        println!("cargo:rustc-link-arg=-sEXPORTED_FUNCTIONS=_MediaInfo_New,_MediaInfo_Delete,_MediaInfo_Open_Buffer_Init,_MediaInfo_Open_Buffer_Continue,_MediaInfo_Open_Buffer_Continue_GoTo_Get,_MediaInfo_Open_Buffer_Finalize,_MediaInfo_Open,_MediaInfo_Close,_MediaInfo_Option,_MediaInfo_Inform,_MediaInfo_Count_Get,_MediaInfo_Get");
-        
         println!("cargo:warning=MediaInfo built as single WASM module with static linking");
     } else {
         println!("cargo:warning=MediaInfo built for native or non-Emscripten target");
