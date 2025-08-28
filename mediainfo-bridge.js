@@ -92,6 +92,39 @@ window.mediainfo_open_buffer_finalize = function(handle) {
     }
 };
 
+window.mediainfo_open_buffer_continue_goto_get = function(handle) {
+    const instance = window.mediaInfoInstances?.get(handle);
+    if (!instance) return 0;
+    try {
+        return instance.Open_Buffer_Continue_GoTo_Get();
+    } catch (error) {
+        console.error('Failed to get goto position:', error);
+        return 0;
+    }
+};
+
+window.mediainfo_open_buffer_continue_goto_get_lower = function(handle) {
+    const instance = window.mediaInfoInstances?.get(handle);
+    if (!instance) return 0;
+    try {
+        return instance.Open_Buffer_Continue_GoTo_Get_Lower();
+    } catch (error) {
+        console.error('Failed to get goto lower position:', error);
+        return 0;
+    }
+};
+
+window.mediainfo_open_buffer_continue_goto_get_upper = function(handle) {
+    const instance = window.mediaInfoInstances?.get(handle);
+    if (!instance) return 0;
+    try {
+        return instance.Open_Buffer_Continue_GoTo_Get_Upper();
+    } catch (error) {
+        console.error('Failed to get goto upper position:', error);
+        return 0;
+    }
+};
+
 // Information retrieval
 window.mediainfo_get = function(handle, streamKind, streamNumber, parameterPtr, infoKindPtr, searchKindPtr) {
     const instance = window.mediaInfoInstances?.get(handle);

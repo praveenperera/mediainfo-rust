@@ -11,6 +11,9 @@ unsafe extern "C" {
     fn mediainfo_open_buffer_init(handle: c_int, file_size: c_int, file_offset: c_int) -> c_int;
     fn mediainfo_open_buffer_continue(handle: c_int, buffer: *const u8, buffer_size: c_int) -> c_int;
     fn mediainfo_open_buffer_finalize(handle: c_int) -> c_int;
+    fn mediainfo_open_buffer_continue_goto_get(handle: c_int) -> c_int;
+    fn mediainfo_open_buffer_continue_goto_get_lower(handle: c_int) -> c_int;
+    fn mediainfo_open_buffer_continue_goto_get_upper(handle: c_int) -> c_int;
     fn mediainfo_get(
         handle: c_int,
         stream_kind: c_int,
@@ -77,6 +80,21 @@ impl MediaInfoHandle {
     pub fn open_buffer_finalize(&self) -> bool {
         let result = unsafe { mediainfo_open_buffer_finalize(self.handle) };
         result != 0
+    }
+
+    /// Get buffer position for seeking
+    pub fn open_buffer_continue_goto_get(&self) -> usize {
+        unsafe { mediainfo_open_buffer_continue_goto_get(self.handle) as usize }
+    }
+
+    /// Get lower bound of buffer position for seeking
+    pub fn open_buffer_continue_goto_get_lower(&self) -> usize {
+        unsafe { mediainfo_open_buffer_continue_goto_get_lower(self.handle) as usize }
+    }
+
+    /// Get upper bound of buffer position for seeking
+    pub fn open_buffer_continue_goto_get_upper(&self) -> usize {
+        unsafe { mediainfo_open_buffer_continue_goto_get_upper(self.handle) as usize }
     }
 
     /// Get information about a stream

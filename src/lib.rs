@@ -10,7 +10,7 @@ mod streams;
 mod convenience_api;
 
 #[cfg(target_arch = "wasm32")]
-mod wasm_bridge;
+pub mod wasm_bridge;
 
 pub type MediaInfoWrapper = convenience_api::MediaInfoWrapper;
 pub type MediaInfo = ffi::MediaInfo;
