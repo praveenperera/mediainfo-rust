@@ -19,7 +19,7 @@ export function initMediaInfo() {
     
     try {
         // Initialize SharedArrayBuffer for synchronization
-        syncBuffer = new ArrayBuffer(SYNC_BUFFER_SIZE * 4); // 4 bytes per 32-bit integer
+        syncBuffer = new SharedArrayBuffer(SYNC_BUFFER_SIZE * 4); // 4 bytes per 32-bit integer
         syncView = new Int32Array(syncBuffer);
         Atomics.store(syncView, RESPONSE_READY_INDEX, 0);
         Atomics.store(syncView, REQUEST_ID_INDEX, 0);
