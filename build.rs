@@ -23,7 +23,7 @@ fn build_for_native() {
 fn build_for_wasm() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let mediainfo_src = PathBuf::from(&manifest_dir).join("mediainfo_src");
-    let target = "wasm32-unknown-emscripten";
+    let target = "wasm32-unknown-unknown";
     
     println!("cargo:rerun-if-changed={}", mediainfo_src.display());
     println!("cargo:rerun-if-changed={}", mediainfo_src.join("SO_Compile.sh").display());
@@ -52,14 +52,10 @@ fn build_for_wasm() {
     
     println!("cargo:warning=MediaInfo compilation completed successfully");
     
-    // Generate embedded bridge with MediaInfo WASM
-    generate_embedded_bridge(&manifest_dir, &mediainfo_src);
-    
     // Generate embedded web worker bridge
     generate_embedded_worker_bridge(&manifest_dir, &mediainfo_src);
     
     // For Emscripten builds, link against the static libraries
-    if target == "wasm32-unknown-emscripten" {
         let zenlib_path = mediainfo_src.join("ZenLib/Project/GNU/Library/.libs");
         let mediainfo_path = mediainfo_src.join("MediaInfoLib/Project/GNU/Library/.libs");
         
@@ -71,38 +67,6 @@ fn build_for_wasm() {
         println!("cargo:rustc-link-lib=static=zen");
         
         println!("cargo:warning=MediaInfo built as single WASM module with static linking");
-    } else {
-        println!("cargo:warning=MediaInfo built for native or non-Emscripten target");
-    }
-}
-
-fn generate_embedded_bridge(manifest_dir: &str, mediainfo_src: &PathBuf) {
-    let mediainfo_lib_dir = mediainfo_src.join("MediaInfoLib/Project/GNU/Library");
-    let wasm_js_path = mediainfo_lib_dir.join("MediaInfoWasm.js");
-    let wasm_file_path = mediainfo_lib_dir.join("MediaInfoWasm.wasm");
-    let bridge_template_path = PathBuf::from(manifest_dir).join("mediainfo-bridge.js");
-    
-    if !wasm_js_path.exists() || !wasm_file_path.exists() || !bridge_template_path.exists() {
-        println!("cargo:warning=Skipping embedded bridge generation - missing files");
-        return;
-    }
-    
-    // Read the MediaInfo JS and WASM files
-    let mediainfo_js = fs::read_to_string(&wasm_js_path).expect("Failed to read MediaInfoWasm.js");
-    let mediainfo_wasm = fs::read(&wasm_file_path).expect("Failed to read MediaInfoWasm.wasm");
-    let bridge_template = fs::read_to_string(&bridge_template_path).expect("Failed to read bridge template");
-    
-    // Convert WASM to base64
-    let wasm_base64 = base64_encode(&mediainfo_wasm);
-    
-    // Generate the embedded bridge
-    let embedded_bridge = generate_bridge_with_embedded_assets(&bridge_template, &mediainfo_js, &wasm_base64);
-    
-    // Write to output
-    let out_path = PathBuf::from(manifest_dir).join("mediainfo-bridge-embedded.js");
-    fs::write(&out_path, embedded_bridge).expect("Failed to write embedded bridge");
-    
-    println!("cargo:warning=Generated embedded bridge at {}", out_path.display());
 }
 
 fn base64_encode(data: &[u8]) -> String {
