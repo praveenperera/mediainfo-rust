@@ -5,7 +5,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_void};
 
 // External JS functions exposed via the bridge
-extern "C" {
+unsafe extern "C" {
     fn mediainfo_new() -> c_int;
     fn mediainfo_delete(handle: c_int);
     fn mediainfo_open_buffer_init(handle: c_int, file_size: c_int, file_offset: c_int) -> c_int;
