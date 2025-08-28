@@ -62,13 +62,48 @@ if [ "$1" = "--emscripten-lib" ] || [ "$TARGET" = "wasm32-unknown-emscripten" ] 
     CFLAGS="$CFLAGS -Oz -s EMBIND_STD_STRING_IS_UTF8=1"
     CXXFLAGS="$CXXFLAGS -Oz -s EMBIND_STD_STRING_IS_UTF8=1 -fno-exceptions"
     MediaInfoLib_CXXFLAGS="-I ../../../Source -I ../../../../ZenLib/Source -s USE_ZLIB=1 \
-                           -DMEDIAINFO_ADVANCED_NO \
+                           -DMEDIAINFO_ADVANCED_YES \
                            -DMEDIAINFO_MINIMAL_YES \
                            -DMEDIAINFO_EXPORT_YES \
                            -DMEDIAINFO_SEEK_YES \
-                           -DMEDIAINFO_CONFORMANCE_YES \
                            -DMEDIAINFO_READER_NO \
-                           -DMEDIAINFO_REFERENCES_NO"
+                           -DMEDIAINFO_REFERENCES_NO \
+                           -DMEDIAINFO_GRAPH_NO \
+                           -DMEDIAINFO_GRAPHVIZ_NO \
+                           -DMEDIAINFO_ARCHIVE_NO \
+                           -DMEDIAINFO_FIXITY_NO \
+                           -DMEDIAINFO_CSV_NO \
+                           -DMEDIAINFO_CUSTOM_NO \
+                           -DMEDIAINFO_EBUCORE_NO \
+                           -DMEDIAINFO_FIMS_NO \
+                           -DMEDIAINFO_MPEG7_NO \
+                           -DMEDIAINFO_PBCORE_NO \
+                           -DMEDIAINFO_REVTMD_NO \
+                           -DMEDIAINFO_NISO_NO \
+                           -DMEDIAINFO_MINIMIZESIZE \
+                           -DMEDIAINFO_TRACE_NO \
+                           -DMEDIAINFO_FILTER_NO \
+                           -DMEDIAINFO_DUPLICATE_NO \
+                           -DMEDIAINFO_MACROBLOCKS_NO \
+                           -DMEDIAINFO_NEXTPACKET_NO \
+                           -DMEDIAINFO_EVENTS_NO \
+                           -DMEDIAINFO_DEMUX_NO \
+                           -DMEDIAINFO_IBI_NO \
+                           -DMEDIAINFO_CONFORMANCE_YES \
+                           -DMEDIAINFO_DIRECTORY_NO \
+                           -DMEDIAINFO_LIBCURL_NO \
+                           -DMEDIAINFO_LIBMMS_NO \
+                           -DMEDIAINFO_READTHREAD_NO \
+                           -DMEDIAINFO_MD5_NO \
+                           -DMEDIAINFO_SHA1_NO \
+                           -DMEDIAINFO_SHA2_NO \
+                           -DMEDIAINFO_AES_NO \
+                           -DMEDIAINFO_JNI_NO \
+                           -DMEDIAINFO_TRACE_FFV1CONTENT_NO \
+                           -DMEDIAINFO_COMPRESS \
+                           -DMEDIAINFO_DECODE_NO \
+                           -DMEDIAINFO_IBIUSAGE_NO \
+                           -DMEDIAINFO_TINYXML2_NO"
     echo "Detected WASM target: $TARGET - configuring for Emscripten build"
 fi
 
@@ -81,7 +116,7 @@ if test -e ZenLib/Project/GNU/Library/configure; then
     chmod +x configure
 
     if [ "$OS" = "emscripten" ]; then
-        emconfigure ./configure --host=le32-unknown-nacl --disable-unicode --enable-static --disable-shared CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS"
+        emconfigure ./configure --host=le32-unknown-nacl --disable-unicode --enable-static --disable-shared --disable-dll CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS"
     else
         ./configure --enable-static --disable-shared $ZenLib_Options $*
     fi

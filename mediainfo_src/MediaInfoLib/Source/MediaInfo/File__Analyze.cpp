@@ -2174,7 +2174,9 @@ bool File__Analyze::FileHeader_Begin_XML(XMLDocument &Document)
         break;
     }
 
-    if (Document.Parse(DataUTF8.c_str()))
+    size_t length = DataUTF8.size();
+
+    if (Document.Parse(DataUTF8.c_str(), length))
     {
         Reject();
         return false;

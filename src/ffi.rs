@@ -66,10 +66,13 @@ pub struct MediaInfo {
 impl Default for MediaInfo {
     fn default() -> Self {
         unsafe {
-            // NOTE(erick): Setting the locale so we can
-            // work properly with c wide strings.
-            let empty_c_str = CString::new("").unwrap();
-            setlocale(LC_CTYPE, empty_c_str.as_ptr());
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                // NOTE(erick): Setting the locale so we can
+                // work properly with c wide strings.
+                let empty_c_str = CString::new("").unwrap();
+                setlocale(LC_CTYPE, empty_c_str.as_ptr());
+            }
             MediaInfo {
                 handle : MediaInfo_New(),
             }
@@ -273,5 +276,6 @@ unsafe extern "C" {
                      info_kind: c_MediaInfoInfo, search_kind: c_MediaInfoInfo)
                      -> *const wchar;
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn setlocale(category: c_int, locale: *const c_char) -> *const c_char;
 }
