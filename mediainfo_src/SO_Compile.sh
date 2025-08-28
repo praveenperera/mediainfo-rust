@@ -56,10 +56,6 @@ if [ "$1" = "--emscripten-lib" ] || [ "$TARGET" = "wasm32-unknown-emscripten" ] 
     if [ "$1" = "--emscripten-lib" ]; then
         shift
     fi
-    # Create o.txt file in current directory
-    echo "WASM target detected: $TARGET" > o.txt
-    echo "Setting up Emscripten build configuration" >> o.txt
-    echo "Build timestamp: $(date)" >> o.txt
     
     OS="emscripten"
     Make="emmake make"
@@ -165,8 +161,8 @@ if [ "$OS" = "emscripten" ]; then
     fi
 
     echo "MediaInfoLib JavaScript interface is in MediaInfoLib/Project/GNU/Library"
+    echo "Static libraries are also available in .libs directories for Rust linking"
     cd $Home
-    exit
 fi
 
 ##################################################################

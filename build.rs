@@ -22,18 +22,18 @@ fn build_for_wasm() {
     use std::process::Command;
     
     let target = env::var("TARGET").unwrap();
-    println!("cargo:rerun-if-changed=mediainfo_src/SO_Compile.sh");
-    println!("cargo:rerun-if-changed=mediainfo_src/");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let mediainfo_src = PathBuf::from(&manifest_dir).join("mediainfo_src");
     
-    // Set TARGET environment variable for the compile script
-    unsafe {
-        env::set_var("TARGET", &target);
-    }
+    println!("cargo:rerun-if-changed={}/SO_Compile.sh", mediainfo_src.display());
+    println!("cargo:rerun-if-changed={}", mediainfo_src.display());
     
     // Run the SO_Compile.sh script to build MediaInfo for WASM
+    let script_path = mediainfo_src.join("SO_Compile.sh");
     let output = Command::new("sh")
-        .arg("mediainfo_src/SO_Compile.sh")
+        .arg(&script_path)
         .env("TARGET", &target)
+        .current_dir(&mediainfo_src)
         .output()
         .expect("Failed to execute SO_Compile.sh");
     
@@ -49,14 +49,15 @@ fn build_for_wasm() {
     println!("SO_Compile.sh output: {}", String::from_utf8_lossy(&output.stdout));
     
     // Link against the compiled MediaInfo libraries
-    // The script builds libraries in MediaInfoLib/Project/GNU/Library/.libs/
-    let mediainfo_lib_path = "mediainfo_src/MediaInfoLib/Project/GNU/Library/.libs";
-    let zenlib_path = "mediainfo_src/ZenLib/Project/GNU/Library/.libs";
+    let mediainfo_lib_path = mediainfo_src.join("MediaInfoLib/Project/GNU/Library/.libs");
+    let zenlib_path = mediainfo_src.join("ZenLib/Project/GNU/Library/.libs");
     
-    println!("cargo:rustc-link-search=native={}", mediainfo_lib_path);
-    println!("cargo:rustc-link-search=native={}", zenlib_path);
-    println!("cargo:rustc-link-lib=static=libmediainfo");
-    println!("cargo:rustc-link-lib=static=libzen");
+    println!("cargo:rustc-link-search=native={}", mediainfo_lib_path.display());
+    println!("cargo:rustc-link-search=native={}", zenlib_path.display());
+    
+    // Link to the actual static library files (without lib prefix for -l flag)
+    println!("cargo:rustc-link-lib=static=mediainfo");
+    println!("cargo:rustc-link-lib=static=zen");
     
     // Add WASM-specific linker flags
     println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
