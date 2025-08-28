@@ -78,6 +78,7 @@ impl Default for MediaInfo {
             }
             #[cfg(target_arch = "wasm32")]
             {
+                ensure_worker_initialized();
                 let handle_id = MediaInfo_New();
                 MediaInfo {
                     handle: handle_id as *mut void,
@@ -410,8 +411,11 @@ use wasm_bindgen::prelude::*;
 use std::ffi::CStr;
 
 #[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(module = "/mediainfo-bridge-embedded.js")]
-unsafe extern "C" {
+#[wasm_bindgen(module = "/mediainfo-bridge-worker-embedded.js")]
+extern "C" {
+    #[wasm_bindgen(js_name = initMediaInfo)]
+    fn init_mediainfo() -> bool;
+    
     #[wasm_bindgen(js_name = mediainfo_new)]
     fn MediaInfo_New() -> u32;
     
@@ -451,5 +455,15 @@ unsafe extern "C" {
     
     #[wasm_bindgen(js_name = mediainfo_free_string)]
     fn MediaInfo_Free_String(ptr: u32);
+}
+
+#[cfg(target_arch = "wasm32")]
+static WORKER_INIT: std::sync::Once = std::sync::Once::new();
+
+#[cfg(target_arch = "wasm32")]
+fn ensure_worker_initialized() {
+    WORKER_INIT.call_once(|| {
+        init_mediainfo();
+    });
 }
 

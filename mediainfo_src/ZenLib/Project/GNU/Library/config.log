@@ -30,16 +30,31 @@ Kernel configured for up to 16 processors.
 Processor type: arm64e (ARM64E)
 Processors active: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
 Primary memory available: 64.00 gigabytes
-Default processor set: 842 tasks, 4762 threads, 16 processors
-Load average: 1.18, Mach factor: 14.80
+Default processor set: 863 tasks, 5143 threads, 16 processors
+Load average: 2.85, Mach factor: 13.14
 /bin/machine           = unknown
 /usr/bin/oslevel       = unknown
 /bin/universe          = unknown
 
 PATH: /opt/homebrew/Cellar/emscripten/4.0.13/libexec/cache/sysroot/bin/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/pcre2-10.44/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/orc/tools/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/libnice/stun/tools/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/json-glib-1.10.6/json-glib/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gstreamer/tests/validate/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gst-plugins-bad/tools/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gst-plugins-bad/tests/examples/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gst-editing-services/tools/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gst-devtools/dots-viewer/
+PATH: /Users/Shared/sequence-repos/gstreamer/prefix/bin/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gst-plugins-base/tools/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gstreamer/docs/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gstreamer/tools/
+PATH: /Users/Shared/sequence-repos/gstreamer/meson/
+PATH: /Users/Shared/sequence-repos/gstreamer/builddir/subprojects/gst-devtools/validate/tools/
 PATH: /Users/adambrowne/.local/bin/
 PATH: /opt/homebrew/share/google-cloud-sdk/bin/
-PATH: /Users/adambrowne/.nvm/versions/node/v22.18.0/bin/
+PATH: /Users/adambrowne/.nvm/versions/node/v22.17.0/bin/
 PATH: /opt/homebrew/bin/
 PATH: /opt/homebrew/sbin/
 PATH: /usr/local/bin/
@@ -54,8 +69,9 @@ PATH: /var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinter
 PATH: /Users/adambrowne/.local/bin/
 PATH: /opt/homebrew/share/google-cloud-sdk/bin/
 PATH: /Users/adambrowne/Library/pnpm/
-PATH: /Users/adambrowne/.nvm/versions/node/v22.18.0/bin/
+PATH: /Users/adambrowne/.nvm/versions/node/v22.17.0/bin/
 PATH: /Users/adambrowne/.cargo/bin/
+PATH: /Users/adambrowne/.cursor/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/scripts/noConfigScripts/
 PATH: /Users/adambrowne/.local/bin/
 PATH: /Users/adambrowne/.local/bin/
 
@@ -780,14 +796,14 @@ configure:17573: $? = 0
 configure:17610: checking for gmtime_r
 configure:17610: /opt/homebrew/Cellar/emscripten/4.0.13/libexec/em++ -o conftest  -Oz -s EMBIND_STD_STRING_IS_UTF8=1 -fno-exceptions -D_LARGE_FILES -D_FILE_OFFSET_BITS=64 -DSIZE_T_IS_LONG -fPIC -O2   -fPIC -lpthread conftest.cpp  >&5
 wasm-ld: warning: function signature mismatch: gmtime_r
->>> defined as () -> i32 in /var/folders/_n/g_1z_l6d32z8yq2hrv0hsqgh0000gn/T/emscripten_temp_mx2a9it3/conftest_0.o
+>>> defined as () -> i32 in /var/folders/_n/g_1z_l6d32z8yq2hrv0hsqgh0000gn/T/emscripten_temp_lsgy88kf/conftest_0.o
 >>> defined as (i32, i32) -> i32 in /opt/homebrew/Cellar/emscripten/4.0.13/libexec/cache/sysroot/lib/wasm32-emscripten/libc.a(mktime.o)
 configure:17610: $? = 0
 configure:17610: result: yes
 configure:17616: checking for localtime_r
 configure:17616: /opt/homebrew/Cellar/emscripten/4.0.13/libexec/em++ -o conftest  -Oz -s EMBIND_STD_STRING_IS_UTF8=1 -fno-exceptions -D_LARGE_FILES -D_FILE_OFFSET_BITS=64 -DSIZE_T_IS_LONG -fPIC -O2   -fPIC -lpthread conftest.cpp  >&5
 wasm-ld: warning: function signature mismatch: localtime_r
->>> defined as () -> i32 in /var/folders/_n/g_1z_l6d32z8yq2hrv0hsqgh0000gn/T/emscripten_temp_bz1dsj48/conftest_0.o
+>>> defined as () -> i32 in /var/folders/_n/g_1z_l6d32z8yq2hrv0hsqgh0000gn/T/emscripten_temp_45dnh746/conftest_0.o
 >>> defined as (i32, i32) -> i32 in /opt/homebrew/Cellar/emscripten/4.0.13/libexec/cache/sysroot/lib/wasm32-emscripten/libc.a(mktime.o)
 configure:17616: $? = 0
 configure:17616: result: yes
