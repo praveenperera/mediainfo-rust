@@ -56,6 +56,7 @@ fn build_for_wasm() {
     
     // Export symbols so they don't get imported from env
     println!("cargo:rustc-link-arg=-sEXPORTED_FUNCTIONS=_MediaInfo_New,_MediaInfo_Delete,_MediaInfo_Open_Buffer_Init,_MediaInfo_Open_Buffer_Continue,_MediaInfo_Open_Buffer_Continue_GoTo_Get,_MediaInfo_Open_Buffer_Finalize,_MediaInfo_Open,_MediaInfo_Close,_MediaInfo_Option,_MediaInfo_Inform,_MediaInfo_Count_Get,_MediaInfo_Get,_setlocale");
+    println!("cargo:rustc-link-arg=-sSTANDALONE_WASM=1");
     
     // Don't import these functions from env - they should be resolved from static libs
     println!("cargo:rustc-link-arg=-sERROR_ON_UNDEFINED_SYMBOLS=0");
