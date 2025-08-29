@@ -28,6 +28,18 @@ async function initializeMediaInfo() {
     }
 }
 
+self.onerror = function(error) {
+    console.error('Worker: Error:', error);
+};
+
+self.onabort = function(error) {
+    console.error('Worker: Abort:', error);
+};
+
+self.onmessageerror = function(error) {
+    console.error('Worker: Message Error:', error);
+};
+
 // Message handler for communication with main thread
 self.onmessage = async function(event) {
     if (event.data.type === 'init_sync') {

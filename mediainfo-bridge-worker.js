@@ -29,7 +29,7 @@ export function initMediaInfo() {
         const blob = new Blob([workerCode], { type: 'application/javascript' });
         const workerUrl = URL.createObjectURL(blob);
         
-        worker = new Worker(workerUrl);
+        worker = new Worker(workerUrl, { type: 'module' });
         
         // Handle worker messages
         worker.onmessage = (event) => {
