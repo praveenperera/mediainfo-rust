@@ -2,7 +2,7 @@
 // This worker runs MediaInfo WASM in isolation to avoid main thread conflicts
 
 // Embedded MediaInfo assets will be injected here during build
-// EMBEDf_MEDIAINFO_ASSETS
+// EMBED_MEDIAINFO_ASSETS
 
 let mediaInfoInstance = null;
 let mediaInfoInstances = new Map();
