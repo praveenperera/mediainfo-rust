@@ -35,11 +35,7 @@ export function initMediaInfo() {
         worker.onmessage = (event) => {
             const { id, success, result, error } = event.data;
             responseCache.set(id, { success, result, error });
-            
-            // Signal that response is ready using atomics
-            Atomics.store(syncView, REQUEST_ID_INDEX, id);
-            Atomics.store(syncView, RESPONSE_READY_INDEX, 1);
-            Atomics.notify(syncView, RESPONSE_READY_INDEX, 1);
+            // Atomic operations are now handled inside the worker
         };
         
         // Handle worker errors

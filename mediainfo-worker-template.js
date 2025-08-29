@@ -8,6 +8,12 @@ let mediaInfoInstance = null;
 let mediaInfoInstances = new Map();
 let nextHandle = 1;
 
+// SharedArrayBuffer for synchronization
+let syncBuffer = null;
+let syncView = null;
+const RESPONSE_READY_INDEX = 0; // Index for response ready flag
+const REQUEST_ID_INDEX = 1; // Index for current request ID
+
 // Initialize MediaInfo in the worker context
 async function initializeMediaInfo() {
     try {
@@ -24,7 +30,14 @@ async function initializeMediaInfo() {
 
 // Message handler for communication with main thread
 self.onmessage = async function(event) {
-    const { id, method, params } = event.data;
+    const { type, id, method, params, syncBuffer } = event.data;
+    
+    // Handle SharedArrayBuffer initialization
+    if (type === 'init_sync') {
+        syncBuffer = event.data.syncBuffer;
+        syncView = new Int32Array(syncBuffer);
+        return;
+    }
     
     try {
         let result;
@@ -93,6 +106,13 @@ self.onmessage = async function(event) {
             result
         });
         
+        // Signal that response is ready using atomics (moved from bridge)
+        if (syncView && id) {
+            Atomics.store(syncView, REQUEST_ID_INDEX, id);
+            Atomics.store(syncView, RESPONSE_READY_INDEX, 1);
+            Atomics.notify(syncView, RESPONSE_READY_INDEX, 1);
+        }
+        
     } catch (error) {
         // Send error response
         self.postMessage({
@@ -100,6 +120,13 @@ self.onmessage = async function(event) {
             success: false,
             error: error.message
         });
+        
+        // Signal that response is ready using atomics (even for errors)
+        if (syncView && id) {
+            Atomics.store(syncView, REQUEST_ID_INDEX, id);
+            Atomics.store(syncView, RESPONSE_READY_INDEX, 1);
+            Atomics.notify(syncView, RESPONSE_READY_INDEX, 1);
+        }
     }
 };
 
