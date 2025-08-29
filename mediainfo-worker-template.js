@@ -30,14 +30,13 @@ async function initializeMediaInfo() {
 
 // Message handler for communication with main thread
 self.onmessage = async function(event) {
-    const { type, id, method, params, syncBuffer } = event.data;
-    
-    // Handle SharedArrayBuffer initialization
-    if (type === 'init_sync') {
-        syncBuffer = event.data.syncBuffer;
+    if (event.data.type === 'init_sync') {
+        syncBuffer = event.data.newSync;
         syncView = new Int32Array(syncBuffer);
         return;
     }
+
+    const { type, id, method, params } = event.data;
     
     try {
         let result;

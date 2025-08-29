@@ -46,7 +46,7 @@ export function initMediaInfo() {
         console.log("worker is h", worker)
         
         // Send the SharedArrayBuffer to the worker
-        worker.postMessage({ type: 'init_sync', syncBuffer });
+        worker.postMessage({ type: 'init_sync', newSync: syncBuffer });
         
         // Initialize MediaInfo in the worker (synchronously)
         const initResult = sendWorkerMessageSync('init', {});
