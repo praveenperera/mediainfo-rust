@@ -1,6 +1,8 @@
 ## About
 This is a simple wrapper around the [MediaInfo](https://mediaarea.net/en/MediaInfo)
-library using Rust types.
+library using Rust types. It also includes the current MediaInfo source as of (25.07). 
+
+It is updated to reflect the full json format of the version.
 
 The entire libmediainfo API is not exposed yet. The reason is basically because I don't
 have a test case for the rest of the API.
