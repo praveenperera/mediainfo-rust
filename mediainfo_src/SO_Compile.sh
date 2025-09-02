@@ -215,7 +215,7 @@ if test -e MediaInfoLib/Project/GNU/Library/configure; then
     elif [ "$OS" = "wasm-bindgen" ]; then
         ./configure --host=wasm32-unknown-unknown --enable-static --disable-shared --disable-dll CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS $MediaInfoLib_CXXFLAGS" $*
     else
-        ./configure --enable-staticlibs --enable-shared --disable-static --with-libcurl=runtime --with-graphviz=runtime $MediaInfoLib_Options $*
+        ./configure --enable-static --disable-shared --with-libcurl=runtime --with-graphviz=runtime $MediaInfoLib_Options $*
     fi
     if test -e Makefile; then
         make clean

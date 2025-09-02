@@ -30,15 +30,14 @@ Kernel configured for up to 16 processors.
 Processor type: arm64e (ARM64E)
 Processors active: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
 Primary memory available: 64.00 gigabytes
-Default processor set: 817 tasks, 4899 threads, 16 processors
-Load average: 11.65, Mach factor: 7.08
+Default processor set: 810 tasks, 4985 threads, 16 processors
+Load average: 2.12, Mach factor: 13.89
 /bin/machine           = unknown
 /usr/bin/oslevel       = unknown
 /bin/universe          = unknown
 
 PATH: /Users/adambrowne/.local/bin/
 PATH: /opt/homebrew/share/google-cloud-sdk/bin/
-PATH: /Users/adambrowne/Library/pnpm/
 PATH: /Users/adambrowne/.nvm/versions/node/v22.18.0/bin/
 PATH: /opt/homebrew/bin/
 PATH: /opt/homebrew/sbin/
@@ -51,7 +50,12 @@ PATH: /sbin/
 PATH: /var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/
 PATH: /var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/
 PATH: /var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/
+PATH: /Users/adambrowne/.local/bin/
+PATH: /opt/homebrew/share/google-cloud-sdk/bin/
+PATH: /Users/adambrowne/Library/pnpm/
+PATH: /Users/adambrowne/.nvm/versions/node/v22.18.0/bin/
 PATH: /Users/adambrowne/.cargo/bin/
+PATH: /Users/adambrowne/.cursor/extensions/ms-python.debugpy-2025.8.0-darwin-arm64/bundled/scripts/noConfigScripts/
 PATH: /Users/adambrowne/.local/bin/
 PATH: /Users/adambrowne/.local/bin/
 

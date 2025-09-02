@@ -5,19 +5,19 @@
 # It is necessary for linking the library.
 
 # The name that we can dlopen(3).
-dlname='libmediainfo.0.dylib'
+dlname=''
 
 # Names of this library.
-library_names='libmediainfo.0.dylib libmediainfo.dylib'
+library_names=''
 
 # The name of the static archive.
-old_library=''
+old_library='libmediainfo.a'
 
 # Linker flags that cannot go in dependency_libs.
 inherited_linker_flags=' '
 
 # Libraries that this one depends upon.
-dependency_libs=' -lz -lpthread -ldl'
+dependency_libs=' -lz -ldl'
 
 # Names of additional weak libraries provided by this library
 weak_library_names=''
