@@ -2,7 +2,7 @@ prefix=/usr/local
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
-Unicode=no
+Unicode=yes
 WstringMissing=no
 Libs_Static=${exec_prefix}/lib/libzen.a -lpthread
 
@@ -10,4 +10,4 @@ Name: libzen
 Version: 0.4.41
 Description: ZenLib
 Libs: -L${libdir} -lzen -lpthread
-Cflags: -I${includedir}  -DSIZE_T_IS_LONG
+Cflags: -I${includedir}  -DUNICODE -DSIZE_T_IS_LONG

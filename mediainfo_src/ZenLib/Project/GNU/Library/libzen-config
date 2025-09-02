@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if test "$1" = "CXXFLAGS"; then
-echo  -DSIZE_T_IS_LONG
+echo  -DUNICODE -DSIZE_T_IS_LONG
 fi
 if test "$1" = "LIBS" -a -n ""; then
 echo 
@@ -10,7 +10,7 @@ if test "$1" = "LIBS_Static" -a -n "/Users/adambrowne/Desktop/mediainfo-rust/med
 echo /Users/adambrowne/Desktop/mediainfo-rust/mediainfo_src/ZenLib/Project/GNU/Library/.libs/libzen.a -lpthread 
 fi
 if test "$1" = "Unicode"; then
-echo no
+echo yes
 fi
 if test "$1" = "WstringMissing"; then
 echo no
