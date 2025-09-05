@@ -74,16 +74,23 @@ fn build_universal_macos(mediainfo_src: &PathBuf, compile_script_path: &PathBuf,
             .arg(compile_script_path.file_name().unwrap())
             .current_dir(&mediainfo_src)
             .env("TARGET", format!("{}-apple-darwin", arch))
-            .env("ARCHFLAGS", format!("-arch {}", arch))
-            .env(
+            .env("ARCHFLAGS", format!("-arch {}", arch));
+
+        if env::var("CFLAGS").is_err() {
+            compile_script.env(
                 "CFLAGS",
                 format!("-arch {} -mmacosx-version-min=10.9", arch),
-            )
-            .env(
+            );
+        }
+
+        if env::var("CXXFLAGS").is_err() {
+            compile_script.env(
                 "CXXFLAGS",
                 format!("-arch {} -mmacosx-version-min=10.9", arch),
-            )
-            .env("LDFLAGS", format!("-arch {}", arch));
+            );
+        }
+
+        compile_script.env("LDFLAGS", format!("-arch {}", arch));
 
         let output = compile_script
             .output()
