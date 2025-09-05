@@ -75,13 +75,13 @@ PATH_SEPARATOR=":"
 
 # The host system.
 host_alias=
-host=aarch64-apple-darwin24.5.0
-host_os=darwin24.5.0
+host=aarch64-apple-darwin24.6.0
+host_os=darwin24.6.0
 
 # The build system.
 build_alias=
-build=aarch64-apple-darwin24.5.0
-build_os=darwin24.5.0
+build=aarch64-apple-darwin24.6.0
+build_os=darwin24.6.0
 
 # A sed program that does not truncate output.
 SED="/usr/bin/sed"
@@ -167,7 +167,7 @@ lock_old_archive_extraction=yes
 LTCC="gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-g -O2 -fPIC -O2"
+LTCFLAGS="-arch arm64 -mmacosx-version-min=10.9 -fPIC -O2"
 
 # Take the output of nm and produce a listing of raw symbols and C names.
 global_symbol_pipe="sed -n -e 's/^.*[	 ]\\([ABCDGIRSTW][ABCDGIRSTW]*\\)[	 ][	 ]*_\\([_A-Za-z][_A-Za-z0-9]*\\)\$/\\1 _\\2 \\2/p' | sed '/ __gnu_lto/d'"

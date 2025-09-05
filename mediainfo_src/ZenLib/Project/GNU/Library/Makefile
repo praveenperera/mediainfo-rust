@@ -88,8 +88,8 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-build_triplet = aarch64-apple-darwin24.5.0
-host_triplet = aarch64-apple-darwin24.5.0
+build_triplet = aarch64-apple-darwin24.6.0
+host_triplet = aarch64-apple-darwin24.6.0
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -286,7 +286,7 @@ AUTOMAKE = ${SHELL} '/Users/adambrowne/Desktop/mediainfo-rust/mediainfo_src/ZenL
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g -O2 -fPIC -O2
+CFLAGS = -arch arm64 -mmacosx-version-min=10.9 -fPIC -O2
 CPP = gcc -E
 CPPFLAGS = 
 CSCOPE = cscope
@@ -294,7 +294,7 @@ CTAGS = ctags
 CXX = g++
 CXXCPP = g++ -E
 CXXDEPMODE = depmode=gcc3
-CXXFLAGS = -g -O2 -DUNICODE -D_LARGE_FILES -D_FILE_OFFSET_BITS=64 -DSIZE_T_IS_LONG -fPIC -O2
+CXXFLAGS = -arch arm64 -mmacosx-version-min=10.9 -DUNICODE -D_LARGE_FILES -D_FILE_OFFSET_BITS=64 -DSIZE_T_IS_LONG -fPIC -O2
 CYGPATH_W = echo
 DEFS = -DPACKAGE_NAME=\"libzen\" -DPACKAGE_TARNAME=\"libzen\" -DPACKAGE_VERSION=\"0.4.41\" -DPACKAGE_STRING=\"libzen\ 0.4.41\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DPACKAGE=\"libzen\" -DVERSION=\"0.4.41\" -DHAVE_STDIO_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_STRINGS_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_UNISTD_H=1 -DSTDC_HEADERS=1 -DHAVE_DLFCN_H=1 -DLT_OBJDIR=\".libs/\" -DHAVE_GMTIME_R=1 -DHAVE_LOCALTIME_R=1
 DEPDIR = .deps
@@ -315,7 +315,7 @@ INSTALL_PROGRAM = ${INSTALL}
 INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 LD = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
-LDFLAGS =  -fPIC -lpthread
+LDFLAGS = -arch arm64 -fPIC -lpthread
 LIBOBJS = 
 LIBS = 
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
@@ -366,10 +366,10 @@ am__quote =
 am__tar = $${TAR-tar} chof - "$$tardir"
 am__untar = $${TAR-tar} xf -
 bindir = ${exec_prefix}/bin
-build = aarch64-apple-darwin24.5.0
+build = aarch64-apple-darwin24.6.0
 build_alias = 
 build_cpu = aarch64
-build_os = darwin24.5.0
+build_os = darwin24.6.0
 build_vendor = apple
 builddir = .
 datadir = ${datarootdir}
@@ -377,10 +377,10 @@ datarootdir = ${prefix}/share
 docdir = ${datarootdir}/doc/${PACKAGE_TARNAME}
 dvidir = ${docdir}
 exec_prefix = ${prefix}
-host = aarch64-apple-darwin24.5.0
+host = aarch64-apple-darwin24.6.0
 host_alias = 
 host_cpu = aarch64
-host_os = darwin24.5.0
+host_os = darwin24.6.0
 host_vendor = apple
 htmldir = ${docdir}
 includedir = ${prefix}/include
