@@ -19,7 +19,6 @@ mediainfo_src/**/*-config
 mediainfo_src/**/*.la
 mediainfo_src/**/*.lai
 mediainfo_src/**/*.pc
-mediainfo_src/**/configure
 mediainfo_src/**/*.o
 mediainfo_src/**/*.lo
 mediainfo_src/**/*.Plo

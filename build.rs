@@ -28,21 +28,19 @@ fn build_from_source(target: &str) {
         "x86_64-unknown-linux-gnu" => "linux-x86_64",
         "aarch64-unknown-linux-gnu" => "linux-aarch64",
         _ => {
-            println!(
-                "cargo:warning=Unknown target {}, falling back to source build",
-                target
-            );
+            println!("cargo:warning=Unknown target {target}, falling back to source build",);
             build_single_target(&mediainfo_src, target);
             return;
         }
     };
 
-    let artifact_parent_path = PathBuf::from(&manifest_dir).join("artifacts");
-    let artifact_path = artifact_parent_path.join(artifact_dir);
+    let artifact_path = PathBuf::from(&manifest_dir)
+        .join("artifacts")
+        .join(artifact_dir);
 
-    if !artifact_parent_path.exists() {
-        std::fs::create_dir_all(&artifact_parent_path)
-            .expect("Failed to create artifact directory");
+    println!("cargo:rerun-if-changed={}", artifact_path.display());
+    if !artifact_path.exists() {
+        std::fs::create_dir_all(&artifact_path).expect("Failed to create artifact directory");
     }
 
     // Check if pre-built artifacts exist
@@ -50,15 +48,9 @@ fn build_from_source(target: &str) {
     let mediainfo_artifact = artifact_path.join("libmediainfo.a");
 
     if zenlib_artifact.exists() && mediainfo_artifact.exists() {
-        println!(
-            "cargo:warning=Using pre-built static libraries for {}",
-            target
-        );
+        println!("cargo:info=Using pre-built static libraries for {target}");
     } else {
-        println!(
-            "cargo:warning=Building MediaInfo static libraries for {}",
-            target
-        );
+        println!("cargo:info=Building MediaInfo static libraries for {target}",);
         build_single_target(&mediainfo_src, target);
     }
 
@@ -67,13 +59,14 @@ fn build_from_source(target: &str) {
 }
 
 fn build_single_target(mediainfo_src: &PathBuf, target: &str) {
+    println!("cargo:info=Building MediaInfo for single {target}");
     let compile_script_path = mediainfo_src.join("SO_Compile.sh");
 
     // Execute the compilation script for the specific target
     let mut compile_script = Command::new("bash");
     compile_script
         .arg(compile_script_path.file_name().unwrap())
-        .current_dir(&mediainfo_src)
+        .current_dir(mediainfo_src)
         .env("TARGET", target);
 
     let output = compile_script

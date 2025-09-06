@@ -84,7 +84,7 @@ impl CWcharString {
         {
             let n_bytes = unsafe { wcstombs(ptr::null_mut(), raw, 0) };
 
-            let mut data = vec![0 as u8; (n_bytes + 1) as usize];
+            let mut data = vec![0_u8; (n_bytes + 1) as usize];
             let data_ptr = (&mut data[0] as *mut u8) as *mut c_char;
 
             unsafe {
