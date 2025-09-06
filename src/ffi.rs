@@ -294,7 +294,7 @@ impl MediaInfo {
                 }
 
                 let result = result.unwrap();
-                if result.is_empty() {
+                if result.len() == 0 {
                     return Err(MediaInfoError::ZeroLengthResultError);
                 }
 

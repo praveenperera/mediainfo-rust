@@ -24,26 +24,41 @@ fn build_from_source(target: &str) {
     // Map target to artifact directory
     let artifact_dir = match target {
         "aarch64-apple-darwin" => "macos-arm64",
-        "x86_64-apple-darwin" => "macos-x86_64", 
+        "x86_64-apple-darwin" => "macos-x86_64",
         "x86_64-unknown-linux-gnu" => "linux-x86_64",
         "aarch64-unknown-linux-gnu" => "linux-aarch64",
         _ => {
-            println!("cargo:warning=Unknown target {}, falling back to source build", target);
+            println!(
+                "cargo:warning=Unknown target {}, falling back to source build",
+                target
+            );
             build_single_target(&mediainfo_src, target);
             return;
         }
     };
 
-    let artifact_path = PathBuf::from(&manifest_dir).join("artifacts").join(artifact_dir);
-    
+    let artifact_parent_path = PathBuf::from(&manifest_dir).join("artifacts");
+    let artifact_path = artifact_parent_path.join(artifact_dir);
+
+    if !artifact_parent_path.exists() {
+        std::fs::create_dir_all(&artifact_parent_path)
+            .expect("Failed to create artifact directory");
+    }
+
     // Check if pre-built artifacts exist
     let zenlib_artifact = artifact_path.join("libzen.a");
     let mediainfo_artifact = artifact_path.join("libmediainfo.a");
-    
+
     if zenlib_artifact.exists() && mediainfo_artifact.exists() {
-        println!("cargo:warning=Using pre-built static libraries for {}", target);
+        println!(
+            "cargo:warning=Using pre-built static libraries for {}",
+            target
+        );
     } else {
-        println!("cargo:warning=Building MediaInfo static libraries for {}", target);
+        println!(
+            "cargo:warning=Building MediaInfo static libraries for {}",
+            target
+        );
         build_single_target(&mediainfo_src, target);
     }
 
@@ -87,7 +102,7 @@ fn setup_linking(artifact_path: &PathBuf, target: &str) {
     if target.contains("darwin") {
         // macOS system libraries that MediaInfo depends on
         println!("cargo:rustc-link-lib=c++");
-        println!("cargo:rustc-link-lib=framework=CoreFoundation");  
+        println!("cargo:rustc-link-lib=framework=CoreFoundation");
         println!("cargo:rustc-link-lib=framework=IOKit");
         println!("cargo:rustc-link-lib=z");
     } else if target.contains("linux") {
