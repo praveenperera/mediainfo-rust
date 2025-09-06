@@ -1,7 +1,6 @@
 use std::env;
 use std::fs;
-use std::fs::OpenOptions;
-use std::io::{self, Write};
+use std::io::{self};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -86,7 +85,6 @@ fn build_single_target(mediainfo_src: &PathBuf, target: &str, artifact_parent: &
         "cargo:warning=Compiling MediaInfo for single {}, target={target}",
         compile_script_full_path.display()
     );
-    let mut compile_script = Command::new(compile_script_full_path);
     // Invoke via sh for portability across filesystems preserving exec bits
     let mut compile_script = Command::new("sh");
     compile_script

@@ -60,22 +60,43 @@ setup_target_env() {
     local target="$1"
     case "$target" in
         "aarch64-apple-darwin")
-            export CC="clang -arch arm64"
-            export CXX="clang++ -arch arm64"
+            export CC="clang"
+            export CXX="clang++"
             local deployment_target=$(get_macos_deployment_target)
-            export CFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CFLAGS"
-            export CXXFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
-            export LDFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            if [ -z "$deployment_target" ]; then deployment_target="11.0"; fi
+            # Add SDK sysroot if available
+            if command -v xcrun >/dev/null 2>&1; then
+                SDKROOT=$(xcrun --show-sdk-path 2>/dev/null || true)
+            fi
+            if [ ! -z "$SDKROOT" ]; then
+                export CFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $CFLAGS"
+                export CXXFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $CXXFLAGS"
+                export LDFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $LDFLAGS"
+            else
+                export CFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CFLAGS"
+                export CXXFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
+                export LDFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            fi
             export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
             echo "Setup environment for macOS ARM64 (deployment target: $deployment_target)"
             ;;
         "x86_64-apple-darwin")
-            export CC="clang -arch x86_64"
-            export CXX="clang++ -arch x86_64"
+            export CC="clang"
+            export CXX="clang++"
             local deployment_target=$(get_macos_deployment_target)
-            export CFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CFLAGS"
-            export CXXFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
-            export LDFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            if [ -z "$deployment_target" ]; then deployment_target="11.0"; fi
+            if command -v xcrun >/dev/null 2>&1; then
+                SDKROOT=$(xcrun --show-sdk-path 2>/dev/null || true)
+            fi
+            if [ ! -z "$SDKROOT" ]; then
+                export CFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $CFLAGS"
+                export CXXFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $CXXFLAGS"
+                export LDFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $LDFLAGS"
+            else
+                export CFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CFLAGS"
+                export CXXFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
+                export LDFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            fi
             export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
             echo "Setup environment for macOS x86_64 (deployment target: $deployment_target)"
             ;;
@@ -247,6 +268,16 @@ elif [ "$TARGET" = "wasm32-unknown-unknown" ]; then
                            -D__WASM__ \
                            -DUNIX"
     echo "Detected WASM target: $TARGET - configuring for wasm-bindgen build"
+fi
+
+##################################################################
+# Ensure libtoolize is available (macOS uses glibtoolize)
+
+if ! command -v libtoolize >/dev/null 2>&1; then
+    if command -v glibtoolize >/dev/null 2>&1; then
+        export LIBTOOLIZE=glibtoolize
+        echo "Using glibtoolize as libtoolize"
+    fi
 fi
 
 ##################################################################
