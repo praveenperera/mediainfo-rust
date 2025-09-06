@@ -11,7 +11,9 @@ fn main() {
     for ext in extnames.iter() {
         let filename = sample_path.join(format!("sample.{}", ext));
 
-        media_info.open(&filename).expect("It should open the file.");
+        media_info
+            .open(&filename)
+            .expect("It should open the file.");
         println!("Filename: {}", filename.to_str().as_ref().unwrap());
         println!("{:?}\n", media_info.duration().unwrap());
 

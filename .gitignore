@@ -3,3 +3,40 @@ Cargo.lock
 
 *~undo-tree~
 #*#
+
+# Build artifacts directory
+artifacts/
+
+# All mediainfo build artifacts
+mediainfo_src/**/.deps/
+mediainfo_src/**/.libs/
+mediainfo_src/**/Makefile
+mediainfo_src/**/config.log
+mediainfo_src/**/config.status
+mediainfo_src/**/config.cache
+mediainfo_src/**/libtool
+mediainfo_src/**/*-config
+mediainfo_src/**/*.la
+mediainfo_src/**/*.lai
+mediainfo_src/**/*.pc
+mediainfo_src/**/configure
+mediainfo_src/**/*.o
+mediainfo_src/**/*.lo
+mediainfo_src/**/*.Plo
+
+# Old libs directories from previous build system
+mediainfo_src/libs_*/
+
+# Additional autotools artifacts
+mediainfo_src/**/compile
+mediainfo_src/**/config.guess
+mediainfo_src/**/config.sub
+mediainfo_src/**/install-sh
+mediainfo_src/**/missing
+mediainfo_src/**/depcomp
+mediainfo_src/**/test-driver
+mediainfo_src/**/aclocal.m4
+mediainfo_src/**/autom4te.cache/
+mediainfo_src/**/Makefile.in
+mediainfo_src/**/ltmain.sh
+mediainfo_src/**/*.tmp

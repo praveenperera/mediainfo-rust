@@ -1,13 +1,13 @@
-#![recursion_limit="1024"]
-extern crate libc;
+#![recursion_limit = "1024"]
 extern crate chrono;
+extern crate libc;
 #[macro_use]
 extern crate delegate;
 
 mod c_w_string;
+mod convenience_api;
 mod ffi;
 mod streams;
-mod convenience_api;
 
 pub type MediaInfoWrapper = convenience_api::MediaInfoWrapper;
 pub type MediaInfo = ffi::MediaInfo;
@@ -17,8 +17,8 @@ pub type MediaInfoError = ffi::MediaInfoError;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use ffi::MediaInfoStream;
+    use std::path::PathBuf;
 
     #[test]
     fn can_retrieve_stream_count() {

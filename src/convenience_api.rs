@@ -61,7 +61,8 @@ impl MediaInfoWrapper {
         }
 
         self.handle
-            .lock().unwrap()
+            .lock()
+            .unwrap()
             .open_buffer_init(data_len as u64, 0);
         let continue_result = self.handle.lock().unwrap().open_buffer_continue(data);
         let finalize_result = self.handle.lock().unwrap().open_buffer_finalize();
@@ -107,7 +108,10 @@ impl MediaInfoWrapper {
     }
 
     pub fn open_buffer_init(&mut self, data_len: u64, data_offset: u64) -> usize {
-        self.handle.lock().unwrap().open_buffer_init(data_len, data_offset)
+        self.handle
+            .lock()
+            .unwrap()
+            .open_buffer_init(data_len, data_offset)
     }
 
     pub fn open_buffer_continue_goto_get(&mut self) -> usize {
@@ -115,11 +119,17 @@ impl MediaInfoWrapper {
     }
 
     pub fn open_buffer_continue_goto_get_lower(&mut self) -> usize {
-        self.handle.lock().unwrap().open_buffer_continue_goto_get_lower()
+        self.handle
+            .lock()
+            .unwrap()
+            .open_buffer_continue_goto_get_lower()
     }
 
     pub fn open_buffer_continue_goto_get_upper(&mut self) -> usize {
-        self.handle.lock().unwrap().open_buffer_continue_goto_get_upper()
+        self.handle
+            .lock()
+            .unwrap()
+            .open_buffer_continue_goto_get_upper()
     }
 
     fn wrap_streams(&mut self) {
@@ -223,17 +233,17 @@ impl MediaInfoWrapper {
     }
 
     /// Returns the full MediaInfo output as a formatted string
-    /// 
+    ///
     /// This method returns the complete MediaInfo analysis in the default
     /// text format, which includes detailed information about all streams.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns the full MediaInfo text output containing all available information
     /// about the media file, including general properties and all stream details.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if no media file has been opened or if there are issues
     /// retrieving the information from the MediaInfo library.
     pub fn get_full_inform(&mut self) -> MediaInfoResult<String> {
@@ -241,18 +251,18 @@ impl MediaInfoWrapper {
     }
 
     /// Returns the full MediaInfo output in JSON format
-    /// 
+    ///
     /// This method configures MediaInfo to output in JSON format and returns
     /// the complete analysis as a JSON string, which includes all streams and
     /// their properties in a structured format.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// Returns the full MediaInfo analysis as a JSON string containing all
     /// available information about the media file and its streams.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// Returns an error if no media file has been opened, if JSON output cannot
     /// be configured, or if there are issues retrieving the information.
     pub fn get_full_inform_json(&mut self) -> MediaInfoResult<String> {
@@ -376,7 +386,7 @@ mod tests {
         mw.open(filename.as_path()).unwrap();
 
         let json_output = mw.get_full_inform_json().expect("Should get JSON output");
-        
+
         // Basic check that it's JSON-like
         assert!(json_output.contains("{"));
         assert!(json_output.contains("}"));
@@ -393,7 +403,7 @@ mod tests {
         mw.open(filename.as_path()).unwrap();
 
         let text_output = mw.get_full_inform().expect("Should get text output");
-        
+
         // Basic checks for expected content
         assert!(text_output.contains("General"));
         assert!(text_output.contains("Video"));

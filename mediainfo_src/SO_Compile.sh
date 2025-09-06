@@ -38,6 +38,86 @@ if [ -z "$TARGET" ]; then
     TARGET=""
 fi
 
+# Function to determine deployment target for macOS
+get_macos_deployment_target() {
+    # Precedence: MEDIAINFO_MACOSX_DEPLOYMENT_TARGET > RUSTFLAGS > MACOSX_DEPLOYMENT_TARGET > default 11.0
+    if [ ! -z "$MEDIAINFO_MACOSX_DEPLOYMENT_TARGET" ]; then
+        echo "$MEDIAINFO_MACOSX_DEPLOYMENT_TARGET"
+    elif [ ! -z "$RUSTFLAGS" ] && echo "$RUSTFLAGS" | grep -q "mmacosx-version-min="; then
+        echo "$RUSTFLAGS" | sed -n 's/.*-mmacosx-version-min=\([0-9.]*\).*/\1/p' | head -n1
+    elif [ ! -z "$CARGO_ENCODED_RUSTFLAGS" ] && echo "$CARGO_ENCODED_RUSTFLAGS" | grep -q "mmacosx-version-min="; then
+        # Decode CARGO_ENCODED_RUSTFLAGS (\x1f separated)
+        echo "$CARGO_ENCODED_RUSTFLAGS" | tr '\x1f' ' ' | sed -n 's/.*-mmacosx-version-min=\([0-9.]*\).*/\1/p' | head -n1
+    elif [ ! -z "$MACOSX_DEPLOYMENT_TARGET" ]; then
+        echo "$MACOSX_DEPLOYMENT_TARGET"
+    else
+        echo "11.0"
+    fi
+}
+
+# Function to setup target-specific environment
+setup_target_env() {
+    local target="$1"
+    case "$target" in
+        "aarch64-apple-darwin")
+            export CC="clang -arch arm64"
+            export CXX="clang++ -arch arm64"
+            local deployment_target=$(get_macos_deployment_target)
+            export CFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CFLAGS"
+            export CXXFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
+            export LDFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
+            echo "Setup environment for macOS ARM64 (deployment target: $deployment_target)"
+            ;;
+        "x86_64-apple-darwin")
+            export CC="clang -arch x86_64"
+            export CXX="clang++ -arch x86_64"
+            local deployment_target=$(get_macos_deployment_target)
+            export CFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CFLAGS"
+            export CXXFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
+            export LDFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
+            echo "Setup environment for macOS x86_64 (deployment target: $deployment_target)"
+            ;;
+        "x86_64-unknown-linux-gnu"|"aarch64-unknown-linux-gnu")
+            # For Linux, use default compiler setup
+            echo "Setup environment for Linux $target"
+            ;;
+        *)
+            echo "Using default environment for target: $target"
+            ;;
+    esac
+}
+
+# Function to get host triplet from TARGET
+get_host_triplet() {
+    local target="$1"
+    case "$target" in
+        "aarch64-apple-darwin") echo "aarch64-apple-darwin" ;;
+        "x86_64-apple-darwin") echo "x86_64-apple-darwin" ;;
+        "x86_64-unknown-linux-gnu") echo "x86_64-linux-gnu" ;;
+        "aarch64-unknown-linux-gnu") echo "aarch64-linux-gnu" ;;
+        *) echo "" ;;
+    esac
+}
+
+# Function to get artifact directory name from TARGET
+get_artifact_dir() {
+    local target="$1"
+    case "$target" in
+        "aarch64-apple-darwin") echo "macos-arm64" ;;
+        "x86_64-apple-darwin") echo "macos-x86_64" ;;
+        "x86_64-unknown-linux-gnu") echo "linux-x86_64" ;;
+        "aarch64-unknown-linux-gnu") echo "linux-aarch64" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+# Setup environment for the target if specified
+if [ ! -z "$TARGET" ]; then
+    setup_target_env "$TARGET"
+fi
+
 OS=$(uname -s)
 # expr isn’t available on mac
 if [ "$OS" = "Darwin" ]; then
@@ -182,7 +262,15 @@ if test -e ZenLib/Project/GNU/Library/configure; then
     elif [ "$OS" = "wasm-bindgen" ]; then
         ./configure $ZenLib_Options CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS"
     else
-        ./configure --enable-static --disable-shared $ZenLib_Options $*
+        # Use host triplet if TARGET is specified
+        host_arg=""
+        if [ ! -z "$TARGET" ]; then
+            host_triplet=$(get_host_triplet "$TARGET")
+            if [ ! -z "$host_triplet" ]; then
+                host_arg="--host=$host_triplet"
+            fi
+        fi
+        ./configure --enable-static --disable-shared $host_arg $ZenLib_Options $*
     fi
     if test -e Makefile; then
         make clean
@@ -215,7 +303,15 @@ if test -e MediaInfoLib/Project/GNU/Library/configure; then
     elif [ "$OS" = "wasm-bindgen" ]; then
         ./configure --host=wasm32-unknown-unknown --enable-static --disable-shared --disable-dll CC="$CC" CXX="$CXX" CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS $MediaInfoLib_CXXFLAGS" $*
     else
-        ./configure --enable-static --disable-shared --with-libcurl=runtime --with-graphviz=runtime $MediaInfoLib_Options $*
+        # Use host triplet if TARGET is specified
+        host_arg=""
+        if [ ! -z "$TARGET" ]; then
+            host_triplet=$(get_host_triplet "$TARGET")
+            if [ ! -z "$host_triplet" ]; then
+                host_arg="--host=$host_triplet"
+            fi
+        fi
+        ./configure --enable-static --disable-shared --with-libcurl=runtime --with-graphviz=runtime $host_arg $MediaInfoLib_Options $*
     fi
     if test -e Makefile; then
         make clean
@@ -294,8 +390,47 @@ if [ "$OS" = "emscripten" ]; then
 fi
 
 ##################################################################
+# Copy artifacts to target-specific directory
+
+if [ ! -z "$TARGET" ] && [ "$OS" != "emscripten" ] && [ "$OS" != "wasm-bindgen" ]; then
+    artifact_dir=$(get_artifact_dir "$TARGET")
+    if [ "$artifact_dir" != "unknown" ]; then
+        echo "Copying artifacts to $artifact_dir directory"
+        mkdir -p "$Home/../artifacts/$artifact_dir"
+        
+        # Copy ZenLib
+        if [ -f "ZenLib/Project/GNU/Library/.libs/libzen.a" ]; then
+            cp "ZenLib/Project/GNU/Library/.libs/libzen.a" "$Home/../artifacts/$artifact_dir/"
+            echo "Copied libzen.a to artifacts/$artifact_dir/"
+        else
+            echo "Warning: libzen.a not found"
+        fi
+        
+        # Copy MediaInfoLib
+        if [ -f "MediaInfoLib/Project/GNU/Library/.libs/libmediainfo.a" ]; then
+            cp "MediaInfoLib/Project/GNU/Library/.libs/libmediainfo.a" "$Home/../artifacts/$artifact_dir/"
+            echo "Copied libmediainfo.a to artifacts/$artifact_dir/"
+        else
+            echo "Warning: libmediainfo.a not found"
+        fi
+        
+        # Create a build info file
+        echo "Target: $TARGET" > "$Home/../artifacts/$artifact_dir/README.txt"
+        echo "Host: $(get_host_triplet "$TARGET")" >> "$Home/../artifacts/$artifact_dir/README.txt"
+        if [ "$TARGET" = "aarch64-apple-darwin" ] || [ "$TARGET" = "x86_64-apple-darwin" ]; then
+            echo "Deployment Target: $(get_macos_deployment_target)" >> "$Home/../artifacts/$artifact_dir/README.txt"
+        fi
+        echo "Build Date: $(date)" >> "$Home/../artifacts/$artifact_dir/README.txt"
+        echo "Created build info: artifacts/$artifact_dir/README.txt"
+    fi
+fi
+
+##################################################################
 
 echo "MediaInfo shared object is in MediaInfoLib/Project/GNU/Library/.libs"
+if [ ! -z "$TARGET" ] && [ "$artifact_dir" != "unknown" ]; then
+    echo "Static libraries also copied to artifacts/$artifact_dir/"
+fi
 echo "For installing ZenLib, cd ZenLib/Project/GNU/Library && make install"
 echo "For installing MediaInfoLib, cd MediaInfoLib/Project/GNU/Library && make install"
 
