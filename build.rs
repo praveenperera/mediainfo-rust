@@ -28,10 +28,7 @@ fn build_from_source(target: &str) {
         "x86_64-unknown-linux-gnu" => "linux-x86_64",
         "aarch64-unknown-linux-gnu" => "linux-aarch64",
         _ => {
-            println!(
-                "cargo:warning=Unknown target {}, falling back to source build",
-                target
-            );
+            println!("cargo:warning=Unknown target {target}, falling back to source build",);
             build_single_target(&mediainfo_src, target);
             return;
         }
@@ -51,15 +48,9 @@ fn build_from_source(target: &str) {
     let mediainfo_artifact = artifact_path.join("libmediainfo.a");
 
     if zenlib_artifact.exists() && mediainfo_artifact.exists() {
-        println!(
-            "cargo:warning=Using pre-built static libraries for {}",
-            target
-        );
+        println!("cargo:info=Using pre-built static libraries for {target}");
     } else {
-        println!(
-            "cargo:warning=Building MediaInfo static libraries for {}",
-            target
-        );
+        println!("cargo:info=Building MediaInfo static libraries for {target}",);
         build_single_target(&mediainfo_src, target);
     }
 
@@ -68,6 +59,7 @@ fn build_from_source(target: &str) {
 }
 
 fn build_single_target(mediainfo_src: &PathBuf, target: &str) {
+    println!("cargo:info=Building MediaInfo for single {target}");
     let compile_script_path = mediainfo_src.join("SO_Compile.sh");
 
     // Execute the compilation script for the specific target
