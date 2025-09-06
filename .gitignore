@@ -40,3 +40,5 @@ mediainfo_src/**/Makefile.in
 mediainfo_src/**/ltmain.sh
 mediainfo_src/**/*.tmp
 mediainfo_src/ZenLib/Project/GNU/Library/configure~
+mediainfo_src/MediaInfoLib/Project/GNU/Library/configure~
+mediainfo_src/.DS_Store

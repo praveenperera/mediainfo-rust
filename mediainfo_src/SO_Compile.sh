@@ -298,6 +298,11 @@ cd $Home
 
 ##################################################################
 # MediaInfoLib
+#
+cd MediaInfoLib/Project/GNU/Library
+sh ./autogen.sh || true
+autoreconf -fi || true
+cd -
 
 if test -e MediaInfoLib/Project/GNU/Library/configure; then
     cd MediaInfoLib/Project/GNU/Library/
