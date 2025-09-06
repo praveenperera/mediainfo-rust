@@ -37,12 +37,13 @@ fn build_from_source(target: &str) {
         }
     };
 
-    let artifact_parent_path = PathBuf::from(&manifest_dir).join("artifacts");
-    let artifact_path = artifact_parent_path.join(artifact_dir);
+    let artifact_path = PathBuf::from(&manifest_dir)
+        .join("artifacts")
+        .join(artifact_dir);
 
-    if !artifact_parent_path.exists() {
-        std::fs::create_dir_all(&artifact_parent_path)
-            .expect("Failed to create artifact directory");
+    println!("cargo:rerun-if-changed={}", artifact_path.display());
+    if !artifact_path.exists() {
+        std::fs::create_dir_all(&artifact_path).expect("Failed to create artifact directory");
     }
 
     // Check if pre-built artifacts exist
