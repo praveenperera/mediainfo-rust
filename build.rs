@@ -66,7 +66,7 @@ fn build_single_target(mediainfo_src: &PathBuf, target: &str) {
     let mut compile_script = Command::new("bash");
     compile_script
         .arg(compile_script_path.file_name().unwrap())
-        .current_dir(&mediainfo_src)
+        .current_dir(mediainfo_src)
         .env("TARGET", target);
 
     let output = compile_script
