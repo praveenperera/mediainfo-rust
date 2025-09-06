@@ -39,3 +39,4 @@ mediainfo_src/**/autom4te.cache/
 mediainfo_src/**/Makefile.in
 mediainfo_src/**/ltmain.sh
 mediainfo_src/**/*.tmp
+mediainfo_src/ZenLib/Project/GNU/Library/configure~

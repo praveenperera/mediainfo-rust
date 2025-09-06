@@ -10,8 +10,10 @@ fn main() {
 fn build_from_source(target: &str) {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let mediainfo_src = PathBuf::from(&manifest_dir).join("mediainfo_src");
+    let build_rs = PathBuf::from(&manifest_dir).join("build.rs");
 
     println!("cargo:rerun-if-changed={}", mediainfo_src.display());
+    println!("cargo:rerun-if-changed={}", build_rs.display());
     println!(
         "cargo:rerun-if-changed={}",
         mediainfo_src.join("SO_Compile.sh").display()
@@ -39,6 +41,8 @@ fn build_from_source(target: &str) {
         .join(artifact_dir);
 
     println!("cargo:rerun-if-changed={}", artifact_path.display());
+    println!("cargo:rerun-if-changed={}", artifact_path.display());
+
     if !artifact_path.exists() {
         std::fs::create_dir_all(&artifact_path).expect("Failed to create artifact directory");
     }
@@ -59,13 +63,20 @@ fn build_from_source(target: &str) {
 }
 
 fn build_single_target(mediainfo_src: &PathBuf, target: &str) {
-    println!("cargo:info=Building MediaInfo for single {target}");
+    println!("cargo:warning=Building MediaInfo for single {target}");
     let compile_script_path = mediainfo_src.join("SO_Compile.sh");
 
     // Execute the compilation script for the specific target
-    let mut compile_script = Command::new("bash");
+    let compile_script_full_path = compile_script_path
+        .canonicalize()
+        .expect("Failed to canonicalize compile script path");
+
+    println!(
+        "cargo:warning=Compiling MediaInfo for single {}",
+        compile_script_full_path.display()
+    );
+    let mut compile_script = Command::new(compile_script_full_path);
     compile_script
-        .arg(compile_script_path.file_name().unwrap())
         .current_dir(mediainfo_src)
         .env("TARGET", target);
 

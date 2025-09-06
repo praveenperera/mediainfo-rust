@@ -257,6 +257,19 @@ if test -e ZenLib/Project/GNU/Library/configure; then
     test -e Makefile && rm Makefile
     chmod +x configure
 
+    # Bootstrap autotools helpers if missing (e.g. on fresh checkout)
+    if [ ! -f "config.guess" ] || [ ! -f "config.sub" ] || [ ! -f "ltmain.sh" ] || [ ! -f "install-sh" ] || [ ! -f "compile" ]; then
+        echo "Bootstrapping ZenLib autotools files (config.guess/config.sub/ltmain.sh)"
+        if [ -x "./autogen.sh" ]; then
+            sh ./autogen.sh || true
+        fi
+        if [ ! -f "config.guess" ] || [ ! -f "config.sub" ] || [ ! -f "ltmain.sh" ]; then
+            if command -v autoreconf >/dev/null 2>&1; then
+                autoreconf -fi || true
+            fi
+        fi
+    fi
+
     if [ "$OS" = "emscripten" ]; then
         emconfigure ./configure --host=le32-unknown-nacl --disable-unicode --enable-static --disable-shared --disable-dll CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS"
     elif [ "$OS" = "wasm-bindgen" ]; then
