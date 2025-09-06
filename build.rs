@@ -1,5 +1,8 @@
 use std::env;
-use std::path::PathBuf;
+use std::fs;
+use std::fs::OpenOptions;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() {
@@ -9,15 +12,14 @@ fn main() {
 
 fn build_from_source(target: &str) {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set by cargo"));
     let mediainfo_src = PathBuf::from(&manifest_dir).join("mediainfo_src");
     let build_rs = PathBuf::from(&manifest_dir).join("build.rs");
+    let so_compile = mediainfo_src.join("SO_Compile.sh");
 
     println!("cargo:rerun-if-changed={}", mediainfo_src.display());
     println!("cargo:rerun-if-changed={}", build_rs.display());
-    println!(
-        "cargo:rerun-if-changed={}",
-        mediainfo_src.join("SO_Compile.sh").display()
-    );
+    println!("cargo:rerun-if-changed={}", so_compile.display());
 
     if target.contains("windows") {
         panic!("Windows builds not yet supported - please implement Windows-specific build logic");
@@ -31,20 +33,20 @@ fn build_from_source(target: &str) {
         "aarch64-unknown-linux-gnu" => "linux-aarch64",
         _ => {
             println!("cargo:warning=Unknown target {target}, falling back to source build",);
-            build_single_target(&mediainfo_src, target);
+            build_single_target(&mediainfo_src, target, &out_dir);
             return;
         }
     };
 
-    let artifact_path = PathBuf::from(&manifest_dir)
-        .join("artifacts")
-        .join(artifact_dir);
+    // We'll build in a writable temp dir under OUT_DIR and place artifacts there
+    let work_dir = out_dir.join("mediainfo_build");
+    let artifact_root = out_dir.join("artifacts");
+    let artifact_path = artifact_root.join(artifact_dir);
 
-    println!("cargo:rerun-if-changed={}", artifact_path.display());
     println!("cargo:rerun-if-changed={}", artifact_path.display());
 
     if !artifact_path.exists() {
-        std::fs::create_dir_all(&artifact_path).expect("Failed to create artifact directory");
+        fs::create_dir_all(&artifact_path).expect("Failed to create artifact directory");
     }
 
     // Check if pre-built artifacts exist
@@ -54,15 +56,24 @@ fn build_from_source(target: &str) {
     if zenlib_artifact.exists() && mediainfo_artifact.exists() {
         println!("cargo:info=Using pre-built static libraries for {target}");
     } else {
-        println!("cargo:info=Building MediaInfo static libraries for {target}",);
-        build_single_target(&mediainfo_src, target);
+        println!("cargo:info=Building MediaInfo static libraries for {target}");
+        // Prepare an isolated, writable copy of mediainfo_src under OUT_DIR
+        let copied_src = work_dir.join("mediainfo_src");
+        if copied_src.exists() {
+            fs::remove_dir_all(&copied_src).expect("Failed to clean previous build dir");
+        }
+
+        copy_dir_all(&mediainfo_src, &copied_src).expect("Failed to copy mediainfo_src to OUT_DIR");
+
+        // Build using the copied source so we don't write into the crate source (read-only in registry)
+        build_single_target(&copied_src, target, &artifact_root);
     }
 
     // Set up linking for the specific target
     setup_linking(&artifact_path, target);
 }
 
-fn build_single_target(mediainfo_src: &PathBuf, target: &str) {
+fn build_single_target(mediainfo_src: &PathBuf, target: &str, artifact_parent: &Path) {
     println!("cargo:warning=Building MediaInfo for single {target}");
     let compile_script_path = mediainfo_src.join("SO_Compile.sh");
 
@@ -76,9 +87,13 @@ fn build_single_target(mediainfo_src: &PathBuf, target: &str) {
         compile_script_full_path.display()
     );
     let mut compile_script = Command::new(compile_script_full_path);
+    // Invoke via sh for portability across filesystems preserving exec bits
+    let mut compile_script = Command::new("sh");
     compile_script
+        .arg(compile_script_full_path)
         .current_dir(mediainfo_src)
-        .env("TARGET", target);
+        .env("TARGET", target)
+        .env("ARTIFACT_PARENT_DIR", artifact_parent);
 
     let output = compile_script
         .output()
@@ -117,8 +132,25 @@ fn setup_linking(artifact_path: &PathBuf, target: &str) {
         println!("cargo:rustc-link-lib=z");
     }
 
-    println!(
-        "cargo:warning=MediaInfo configured for static linking with target: {}",
-        target
-    );
+    println!("cargo:warning=MediaInfo configured for static linking with target={target}",);
+}
+
+fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
+    if !dst.exists() {
+        fs::create_dir_all(dst)?;
+    }
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_all(&src_path, &dst_path)?;
+        } else if file_type.is_file() {
+            fs::copy(&src_path, &dst_path)?;
+        } else {
+            // Skip symlinks and others for simplicity
+        }
+    }
+    Ok(())
 }

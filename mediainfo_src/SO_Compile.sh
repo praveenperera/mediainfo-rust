@@ -288,6 +288,8 @@ if test -e ZenLib/Project/GNU/Library/configure; then
         fi
     else
         echo Problem while configuring ZenLib
+        echo "See config.log at: $(pwd)/config.log"
+        test -f config.log && { echo "--- config.log (tail) ---"; tail -n 200 config.log; }
         exit
     fi
 else
@@ -334,6 +336,8 @@ if test -e MediaInfoLib/Project/GNU/Library/configure; then
         fi
     else
         echo Problem while configuring MediaInfoLib
+        echo "See config.log at: $(pwd)/config.log"
+        test -f config.log && { echo "--- config.log (tail) ---"; tail -n 200 config.log; }
         exit
     fi
 else
@@ -400,38 +404,45 @@ if [ "$OS" = "emscripten" ]; then
 fi
 
 ##################################################################
+##################################################################
 # Copy artifacts to target-specific directory
 
 if [ ! -z "$TARGET" ] && [ "$OS" != "emscripten" ] && [ "$OS" != "wasm-bindgen" ]; then
     artifact_dir=$(get_artifact_dir "$TARGET")
     if [ "$artifact_dir" != "unknown" ]; then
-        echo "Copying artifacts to $artifact_dir directory"
-        mkdir -p "$Home/../artifacts/$artifact_dir"
-        
+        # Allow build.rs to override the artifact parent dir (default adjacent to mediainfo_src)
+        parent_dir_default="$Home/../artifacts"
+        parent_dir="${ARTIFACT_PARENT_DIR:-$parent_dir_default}"
+
+        echo "Copying artifacts to $parent_dir/$artifact_dir"
+        mkdir -p "$parent_dir/$artifact_dir"
+
         # Copy ZenLib
         if [ -f "ZenLib/Project/GNU/Library/.libs/libzen.a" ]; then
-            cp "ZenLib/Project/GNU/Library/.libs/libzen.a" "$Home/../artifacts/$artifact_dir/"
-            echo "Copied libzen.a to artifacts/$artifact_dir/"
+            cp "ZenLib/Project/GNU/Library/.libs/libzen.a" "$parent_dir/$artifact_dir/"
+            echo "Copied libzen.a to $(basename "$parent_dir")/$artifact_dir/"
         else
             echo "Warning: libzen.a not found"
         fi
-        
+
         # Copy MediaInfoLib
         if [ -f "MediaInfoLib/Project/GNU/Library/.libs/libmediainfo.a" ]; then
-            cp "MediaInfoLib/Project/GNU/Library/.libs/libmediainfo.a" "$Home/../artifacts/$artifact_dir/"
-            echo "Copied libmediainfo.a to artifacts/$artifact_dir/"
+            cp "MediaInfoLib/Project/GNU/Library/.libs/libmediainfo.a" "$parent_dir/$artifact_dir/"
+            echo "Copied libmediainfo.a to $(basename "$parent_dir")/$artifact_dir/"
         else
             echo "Warning: libmediainfo.a not found"
         fi
-        
+
         # Create a build info file
-        echo "Target: $TARGET" > "$Home/../artifacts/$artifact_dir/README.txt"
-        echo "Host: $(get_host_triplet "$TARGET")" >> "$Home/../artifacts/$artifact_dir/README.txt"
-        if [ "$TARGET" = "aarch64-apple-darwin" ] || [ "$TARGET" = "x86_64-apple-darwin" ]; then
-            echo "Deployment Target: $(get_macos_deployment_target)" >> "$Home/../artifacts/$artifact_dir/README.txt"
-        fi
-        echo "Build Date: $(date)" >> "$Home/../artifacts/$artifact_dir/README.txt"
-        echo "Created build info: artifacts/$artifact_dir/README.txt"
+        {
+            echo "Target: $TARGET"
+            echo "Host: $(get_host_triplet "$TARGET")"
+            if [ "$TARGET" = "aarch64-apple-darwin" ] || [ "$TARGET" = "x86_64-apple-darwin" ]; then
+                echo "Deployment Target: $(get_macos_deployment_target)"
+            fi
+            echo "Build Date: $(date)"
+        } > "$parent_dir/$artifact_dir/README.txt"
+        echo "Created build info: $(basename "$parent_dir")/$artifact_dir/README.txt"
     fi
 fi
 
@@ -439,7 +450,9 @@ fi
 
 echo "MediaInfo shared object is in MediaInfoLib/Project/GNU/Library/.libs"
 if [ ! -z "$TARGET" ] && [ "$artifact_dir" != "unknown" ]; then
-    echo "Static libraries also copied to artifacts/$artifact_dir/"
+    parent_dir_default="$Home/../artifacts"
+    parent_dir="${ARTIFACT_PARENT_DIR:-$parent_dir_default}"
+    echo "Static libraries also copied to $(basename "$parent_dir")/$artifact_dir/"
 fi
 echo "For installing ZenLib, cd ZenLib/Project/GNU/Library && make install"
 echo "For installing MediaInfoLib, cd MediaInfoLib/Project/GNU/Library && make install"
