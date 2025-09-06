@@ -60,22 +60,43 @@ setup_target_env() {
     local target="$1"
     case "$target" in
         "aarch64-apple-darwin")
-            export CC="clang -arch arm64"
-            export CXX="clang++ -arch arm64"
+            export CC="clang"
+            export CXX="clang++"
             local deployment_target=$(get_macos_deployment_target)
-            export CFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CFLAGS"
-            export CXXFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
-            export LDFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            if [ -z "$deployment_target" ]; then deployment_target="11.0"; fi
+            # Add SDK sysroot if available
+            if command -v xcrun >/dev/null 2>&1; then
+                SDKROOT=$(xcrun --show-sdk-path 2>/dev/null || true)
+            fi
+            if [ ! -z "$SDKROOT" ]; then
+                export CFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $CFLAGS"
+                export CXXFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $CXXFLAGS"
+                export LDFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $LDFLAGS"
+            else
+                export CFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CFLAGS"
+                export CXXFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
+                export LDFLAGS="-arch arm64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            fi
             export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
             echo "Setup environment for macOS ARM64 (deployment target: $deployment_target)"
             ;;
         "x86_64-apple-darwin")
-            export CC="clang -arch x86_64"
-            export CXX="clang++ -arch x86_64"
+            export CC="clang"
+            export CXX="clang++"
             local deployment_target=$(get_macos_deployment_target)
-            export CFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CFLAGS"
-            export CXXFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
-            export LDFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            if [ -z "$deployment_target" ]; then deployment_target="11.0"; fi
+            if command -v xcrun >/dev/null 2>&1; then
+                SDKROOT=$(xcrun --show-sdk-path 2>/dev/null || true)
+            fi
+            if [ ! -z "$SDKROOT" ]; then
+                export CFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $CFLAGS"
+                export CXXFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $CXXFLAGS"
+                export LDFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target -isysroot $SDKROOT $LDFLAGS"
+            else
+                export CFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CFLAGS"
+                export CXXFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $CXXFLAGS"
+                export LDFLAGS="-arch x86_64 -mmacosx-version-min=$deployment_target $LDFLAGS"
+            fi
             export MACOSX_DEPLOYMENT_TARGET="$deployment_target"
             echo "Setup environment for macOS x86_64 (deployment target: $deployment_target)"
             ;;
@@ -250,7 +271,22 @@ elif [ "$TARGET" = "wasm32-unknown-unknown" ]; then
 fi
 
 ##################################################################
+# Ensure libtoolize is available (macOS uses glibtoolize)
+
+if ! command -v libtoolize >/dev/null 2>&1; then
+    if command -v glibtoolize >/dev/null 2>&1; then
+        export LIBTOOLIZE=glibtoolize
+        echo "Using glibtoolize as libtoolize"
+    fi
+fi
+
+##################################################################
 # ZenLib
+
+cd ZenLib/Project/GNU/Library/
+sh ./autogen.sh || true
+autoreconf -fi || true
+cd -
 
 if test -e ZenLib/Project/GNU/Library/configure; then
     cd ZenLib/Project/GNU/Library/
@@ -283,6 +319,8 @@ if test -e ZenLib/Project/GNU/Library/configure; then
         fi
     else
         echo Problem while configuring ZenLib
+        echo "See config.log at: $(pwd)/config.log"
+        test -f config.log && { echo "--- config.log (tail) ---"; tail -n 200 config.log; }
         exit
     fi
 else
@@ -293,6 +331,11 @@ cd $Home
 
 ##################################################################
 # MediaInfoLib
+#
+cd MediaInfoLib/Project/GNU/Library
+sh ./autogen.sh || true
+autoreconf -fi || true
+cd -
 
 if test -e MediaInfoLib/Project/GNU/Library/configure; then
     cd MediaInfoLib/Project/GNU/Library/
@@ -324,6 +367,8 @@ if test -e MediaInfoLib/Project/GNU/Library/configure; then
         fi
     else
         echo Problem while configuring MediaInfoLib
+        echo "See config.log at: $(pwd)/config.log"
+        test -f config.log && { echo "--- config.log (tail) ---"; tail -n 200 config.log; }
         exit
     fi
 else
@@ -390,38 +435,45 @@ if [ "$OS" = "emscripten" ]; then
 fi
 
 ##################################################################
+##################################################################
 # Copy artifacts to target-specific directory
 
 if [ ! -z "$TARGET" ] && [ "$OS" != "emscripten" ] && [ "$OS" != "wasm-bindgen" ]; then
     artifact_dir=$(get_artifact_dir "$TARGET")
     if [ "$artifact_dir" != "unknown" ]; then
-        echo "Copying artifacts to $artifact_dir directory"
-        mkdir -p "$Home/../artifacts/$artifact_dir"
-        
+        # Allow build.rs to override the artifact parent dir (default adjacent to mediainfo_src)
+        parent_dir_default="$Home/../artifacts"
+        parent_dir="${ARTIFACT_PARENT_DIR:-$parent_dir_default}"
+
+        echo "Copying artifacts to $parent_dir/$artifact_dir"
+        mkdir -p "$parent_dir/$artifact_dir"
+
         # Copy ZenLib
         if [ -f "ZenLib/Project/GNU/Library/.libs/libzen.a" ]; then
-            cp "ZenLib/Project/GNU/Library/.libs/libzen.a" "$Home/../artifacts/$artifact_dir/"
-            echo "Copied libzen.a to artifacts/$artifact_dir/"
+            cp "ZenLib/Project/GNU/Library/.libs/libzen.a" "$parent_dir/$artifact_dir/"
+            echo "Copied libzen.a to $(basename "$parent_dir")/$artifact_dir/"
         else
             echo "Warning: libzen.a not found"
         fi
-        
+
         # Copy MediaInfoLib
         if [ -f "MediaInfoLib/Project/GNU/Library/.libs/libmediainfo.a" ]; then
-            cp "MediaInfoLib/Project/GNU/Library/.libs/libmediainfo.a" "$Home/../artifacts/$artifact_dir/"
-            echo "Copied libmediainfo.a to artifacts/$artifact_dir/"
+            cp "MediaInfoLib/Project/GNU/Library/.libs/libmediainfo.a" "$parent_dir/$artifact_dir/"
+            echo "Copied libmediainfo.a to $(basename "$parent_dir")/$artifact_dir/"
         else
             echo "Warning: libmediainfo.a not found"
         fi
-        
+
         # Create a build info file
-        echo "Target: $TARGET" > "$Home/../artifacts/$artifact_dir/README.txt"
-        echo "Host: $(get_host_triplet "$TARGET")" >> "$Home/../artifacts/$artifact_dir/README.txt"
-        if [ "$TARGET" = "aarch64-apple-darwin" ] || [ "$TARGET" = "x86_64-apple-darwin" ]; then
-            echo "Deployment Target: $(get_macos_deployment_target)" >> "$Home/../artifacts/$artifact_dir/README.txt"
-        fi
-        echo "Build Date: $(date)" >> "$Home/../artifacts/$artifact_dir/README.txt"
-        echo "Created build info: artifacts/$artifact_dir/README.txt"
+        {
+            echo "Target: $TARGET"
+            echo "Host: $(get_host_triplet "$TARGET")"
+            if [ "$TARGET" = "aarch64-apple-darwin" ] || [ "$TARGET" = "x86_64-apple-darwin" ]; then
+                echo "Deployment Target: $(get_macos_deployment_target)"
+            fi
+            echo "Build Date: $(date)"
+        } > "$parent_dir/$artifact_dir/README.txt"
+        echo "Created build info: $(basename "$parent_dir")/$artifact_dir/README.txt"
     fi
 fi
 
@@ -429,7 +481,9 @@ fi
 
 echo "MediaInfo shared object is in MediaInfoLib/Project/GNU/Library/.libs"
 if [ ! -z "$TARGET" ] && [ "$artifact_dir" != "unknown" ]; then
-    echo "Static libraries also copied to artifacts/$artifact_dir/"
+    parent_dir_default="$Home/../artifacts"
+    parent_dir="${ARTIFACT_PARENT_DIR:-$parent_dir_default}"
+    echo "Static libraries also copied to $(basename "$parent_dir")/$artifact_dir/"
 fi
 echo "For installing ZenLib, cd ZenLib/Project/GNU/Library && make install"
 echo "For installing MediaInfoLib, cd MediaInfoLib/Project/GNU/Library && make install"
