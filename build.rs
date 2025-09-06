@@ -72,7 +72,7 @@ fn build_single_target(mediainfo_src: &PathBuf, target: &str) {
         .expect("Failed to canonicalize compile script path");
 
     println!(
-        "cargo:warning=Compiling MediaInfo for single {}",
+        "cargo:warning=Compiling MediaInfo for single {}, target={target}",
         compile_script_full_path.display()
     );
     let mut compile_script = Command::new(compile_script_full_path);
