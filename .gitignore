@@ -19,6 +19,7 @@ mediainfo_src/**/*-config
 mediainfo_src/**/*.la
 mediainfo_src/**/*.lai
 mediainfo_src/**/*.pc
+mediainfo_src/**/configure
 mediainfo_src/**/*.o
 mediainfo_src/**/*.lo
 mediainfo_src/**/*.Plo
@@ -38,7 +39,6 @@ mediainfo_src/**/aclocal.m4
 mediainfo_src/**/autom4te.cache/
 mediainfo_src/**/Makefile.in
 mediainfo_src/**/ltmain.sh
-mediainfo_src/**/*.tmp
-mediainfo_src/ZenLib/Project/GNU/Library/configure~
-mediainfo_src/MediaInfoLib/Project/GNU/Library/configure~
-mediainfo_src/.DS_Store
+
+# Claude directory
+.claude/
