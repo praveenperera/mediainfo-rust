@@ -11,6 +11,7 @@ struct BuildConfig {
     out_dir: PathBuf,
     mediainfo_src: PathBuf,
     artifact_dir: String,
+    known_target: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -30,17 +31,29 @@ fn main() {
     }
 
     setup_rerun_triggers(&config);
-    
-    let paths = BuildPaths::new(&config);
-    
-    if artifacts_exist(&paths) {
-        println!("cargo:info=Using pre-built static libraries for {}", config.target);
+
+    // Ensure required tools are present for this target before attempting build
+    preflight_check_tools(&config.target);
+
+    if config.known_target {
+        let paths = BuildPaths::new(&config);
+
+        if artifacts_exist(&paths) {
+            println!("cargo:warning=Using pre-built static libraries for {}", config.target);
+        } else {
+            println!("cargo:warning=Building MediaInfo static libraries for {}", config.target);
+            build_libraries(&config, &paths);
+        }
+
+        setup_linking(&paths, &config.target);
     } else {
-        println!("cargo:info=Building MediaInfo static libraries for {}", config.target);
-        build_libraries(&config, &paths);
+        // Fallback: build inside OUT_DIR copy and link directly from .libs
+        let paths = BuildPaths::new(&config);
+        println!("cargo:warning=Unknown target {}; building from source in OUT_DIR", config.target);
+        prepare_build_directory(&config, &paths);
+        run_build_script(&config, &paths);
+        setup_linking_from_local_libs(&paths, &config.target);
     }
-    
-    setup_linking(&paths, &config.target);
 }
 
 impl BuildConfig {
@@ -50,16 +63,12 @@ impl BuildConfig {
         let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set by cargo"));
         let mediainfo_src = manifest_dir.join("mediainfo_src");
         
-        let artifact_dir = match target.as_str() {
-            "aarch64-apple-darwin" => "macos-arm64",
-            "x86_64-apple-darwin" => "macos-x86_64", 
-            "x86_64-unknown-linux-gnu" => "linux-x86_64",
-            "aarch64-unknown-linux-gnu" => "linux-aarch64",
-            _ => {
-                println!("cargo:warning=Unknown target {target}, falling back to source build");
-                build_from_source_fallback(&mediainfo_src, &target, &out_dir);
-                std::process::exit(0);
-            }
+        let (artifact_dir, known_target) = match target.as_str() {
+            "aarch64-apple-darwin" => ("macos-arm64", true),
+            "x86_64-apple-darwin" => ("macos-x86_64", true),
+            "x86_64-unknown-linux-gnu" => ("linux-x86_64", true),
+            "aarch64-unknown-linux-gnu" => ("linux-aarch64", true),
+            _ => ("unknown", false),
         };
         
         Self {
@@ -68,6 +77,7 @@ impl BuildConfig {
             out_dir,
             mediainfo_src,
             artifact_dir: artifact_dir.to_string(),
+            known_target,
         }
     }
 }
@@ -102,6 +112,12 @@ fn setup_rerun_triggers(config: &BuildConfig) {
     println!("cargo:rerun-if-changed={}", config.mediainfo_src.display());
     println!("cargo:rerun-if-changed={}", build_rs.display());
     println!("cargo:rerun-if-changed={}", so_compile.display());
+    // Rebuild if relevant environment variables affecting the build change
+    println!("cargo:rerun-if-env-changed=MEDIAINFO_MACOSX_DEPLOYMENT_TARGET");
+    println!("cargo:rerun-if-env-changed=MACOSX_DEPLOYMENT_TARGET");
+    println!("cargo:rerun-if-env-changed=RUSTFLAGS");
+    println!("cargo:rerun-if-env-changed=CARGO_ENCODED_RUSTFLAGS");
+    println!("cargo:rerun-if-env-changed=TARGET");
 }
 
 fn artifacts_exist(paths: &BuildPaths) -> bool {
@@ -137,7 +153,7 @@ fn run_build_script(config: &BuildConfig, paths: &BuildPaths) {
         compile_script_full_path.display()
     );
 
-    let output = Command::new("sh")
+    let output = Command::new("bash")
         .arg(compile_script_full_path)
         .current_dir(&copied_src)
         .env("TARGET", &config.target)
@@ -165,6 +181,27 @@ fn setup_linking(paths: &BuildPaths, target: &str) {
     println!("cargo:warning=MediaInfo configured for static linking with target={target}");
 }
 
+fn setup_linking_from_local_libs(paths: &BuildPaths, target: &str) {
+    let mediainfo_lib_dir = paths
+        .work_dir
+        .join("mediainfo_src/MediaInfoLib/Project/GNU/Library/.libs");
+    let zenlib_lib_dir = paths
+        .work_dir
+        .join("mediainfo_src/ZenLib/Project/GNU/Library/.libs");
+
+    println!(
+        "cargo:rustc-link-search=native={}",
+        mediainfo_lib_dir.display()
+    );
+    println!("cargo:rustc-link-search=native={}", zenlib_lib_dir.display());
+    println!("cargo:rustc-link-lib=static=mediainfo");
+    println!("cargo:rustc-link-lib=static=zen");
+
+    link_system_libraries(target);
+
+    println!("cargo:warning=MediaInfo configured for static linking with local .libs for target={target}");
+}
+
 fn link_system_libraries(target: &str) {
     if target.contains("darwin") {
         // macOS system libraries
@@ -188,7 +225,7 @@ fn build_from_source_fallback(mediainfo_src: &PathBuf, target: &str, out_dir: &P
         .canonicalize()
         .expect("Failed to canonicalize compile script path");
 
-    let output = Command::new("sh")
+    let output = Command::new("bash")
         .arg(compile_script_full_path)
         .current_dir(mediainfo_src)
         .env("TARGET", target)
@@ -203,6 +240,93 @@ fn build_from_source_fallback(mediainfo_src: &PathBuf, target: &str, out_dir: &P
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BuildType {
+    Native,
+    Emscripten,
+    WasmBindgen,
+}
+
+fn detect_build_type(target: &str) -> BuildType {
+    if target == "wasm32-unknown-emscripten" || target == "wasm32-wasi" {
+        BuildType::Emscripten
+    } else if target == "wasm32-unknown-unknown" {
+        BuildType::WasmBindgen
+    } else {
+        BuildType::Native
+    }
+}
+
+fn preflight_check_tools(target: &str) {
+    let build_type = detect_build_type(target);
+    let mut required: Vec<&str> = vec!["bash", "make"];
+
+    match build_type {
+        BuildType::Emscripten => {
+            required.extend(["emconfigure", "emmake", "em++"].iter().copied());
+        }
+        BuildType::WasmBindgen => {
+            required.extend(["clang", "clang++", "ar"].iter().copied());
+        }
+        BuildType::Native => {
+            if target.contains("apple-darwin") {
+                required.extend(["clang", "clang++", "ar"].iter().copied());
+            } else if target.contains("linux") {
+                // Prefer generic drivers so either gcc/clang works
+                required.extend(["cc", "c++", "ar"].iter().copied());
+            }
+        }
+    }
+
+    let mut missing: Vec<&str> = Vec::new();
+    for tool in required {
+        if !command_exists(tool) {
+            missing.push(tool);
+        }
+    }
+
+    if !missing.is_empty() {
+        let hint = match build_type {
+            BuildType::Emscripten => "Install Emscripten and activate env (source emsdk_env.sh).",
+            BuildType::WasmBindgen => {
+                if target.contains("apple-darwin") {
+                    "Install Xcode Command Line Tools (xcode-select --install)."
+                } else {
+                    "Install clang/LLVM and binutils (ar)."
+                }
+            }
+            BuildType::Native => {
+                if target.contains("apple-darwin") {
+                    "Install Xcode Command Line Tools (xcode-select --install)."
+                } else if target.contains("linux") {
+                    "Install build tools (make, binutils) and a C/C++ compiler (gcc/g++ or clang/clang++)."
+                } else {
+                    "Install a C/C++ toolchain and make."
+                }
+            }
+        };
+
+        panic!(
+            "Required tools missing for target {}: {}\n{}",
+            target,
+            missing.join(", "),
+            hint
+        );
+    }
+}
+
+fn command_exists(tool: &str) -> bool {
+    // Use shell builtin `command -v` to detect presence
+    match Command::new("sh")
+        .arg("-lc")
+        .arg(format!("command -v {} >/dev/null 2>&1", tool))
+        .status()
+    {
+        Ok(status) => status.success(),
+        Err(_) => false,
     }
 }
 

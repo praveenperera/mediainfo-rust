@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e  # Exit on any error
+set -o pipefail
 
 # =================================================================
 # MediaInfo Build Script
@@ -8,8 +9,8 @@ set -e  # Exit on any error
 # =================================================================
 
 # Global configuration
-readonly SCRIPT_DIR
 SCRIPT_DIR="$(pwd)"
+readonly SCRIPT_DIR
 readonly DEFAULT_MAKE="make"
 
 # =================================================================
@@ -204,8 +205,8 @@ build_zenlib() {
     cd ZenLib/Project/GNU/Library/
     
     # Generate build files
-    sh ./autogen.sh || true
-    autoreconf -fi || true
+    sh ./autogen.sh || log "autogen.sh failed or missing; continuing"
+    autoreconf -fi || log "autoreconf failed; continuing"
     
     [ ! -f configure ] && error "ZenLib configure script not found"
     
@@ -231,7 +232,7 @@ build_zenlib() {
     [ ! -f Makefile ] && error "ZenLib configuration failed"
     
     # Build
-    make clean
+    ${MAKE:-$DEFAULT_MAKE} clean
     parallel_make
     
     [ ! -f libzen.la ] && error "ZenLib compilation failed"
@@ -245,8 +246,8 @@ build_mediainfo() {
     cd MediaInfoLib/Project/GNU/Library/
     
     # Generate build files  
-    sh ./autogen.sh || true
-    autoreconf -fi || true
+    sh ./autogen.sh || log "autogen.sh failed or missing; continuing"
+    autoreconf -fi || log "autoreconf failed; continuing"
     
     [ ! -f configure ] && error "MediaInfoLib configure script not found"
     
@@ -274,7 +275,7 @@ build_mediainfo() {
     [ ! -f Makefile ] && error "MediaInfoLib configuration failed"
     
     # Build
-    make clean
+    ${MAKE:-$DEFAULT_MAKE} clean
     parallel_make
     
     [ ! -f libmediainfo.la ] && error "MediaInfoLib compilation failed"
