@@ -19,11 +19,23 @@ jobs:
       - name: Check fmt
         run: cargo fmt --all -- --check
 
-  # warm build job: populate cache so downstream jobs get fast startups
+  # cross-platform build job with matrix for ubuntu and macos
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-14  # ARM64 runner
+            target: aarch64-apple-darwin
+          - os: macos-14  # ARM64 runner building for x86
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Cache Rust build
         id: cargo-cache
@@ -34,18 +46,19 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          key: ${{ matrix.os }}-${{ matrix.target }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ matrix.os }}-${{ matrix.target }}-cargo-
+            ${{ matrix.os }}-cargo-
 
       # pre-fetch and build everything (libs, bins, tests, examples)
       - name: Cargo fetch
         run: cargo fetch
 
       - name: Cargo build
-        run: cargo build --workspace
+        run: cargo build --workspace --target ${{ matrix.target }}
 
-  # clippy (reuses build cache)
+  # clippy (reuses build cache from ubuntu build)
   clippy:
     needs: build
     runs-on: ubuntu-latest
@@ -59,14 +72,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          key: ubuntu-latest-x86_64-unknown-linux-gnu-cargo-${{ hashFiles('rust/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ubuntu-latest-x86_64-unknown-linux-gnu-cargo-
+            ubuntu-latest-cargo-
 
       - name: Cargo clippy
         run: cargo clippy --workspace -- -D warnings
 
-  # tests (reuses build cache)
+  # tests (reuses build cache from ubuntu build)
   test:
     needs: build
     runs-on: ubuntu-latest
@@ -80,9 +94,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          key: ubuntu-latest-x86_64-unknown-linux-gnu-cargo-${{ hashFiles('rust/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ubuntu-latest-x86_64-unknown-linux-gnu-cargo-
+            ubuntu-latest-cargo-
 
       - name: Cargo test
         run: cargo test --workspace -- --nocapture
