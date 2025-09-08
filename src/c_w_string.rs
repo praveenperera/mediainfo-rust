@@ -16,12 +16,13 @@ use std::ptr;
 use std::ffi::CStr;
 use std::ffi::CString;
 
-type size_t = usize;
-type wchar = std::ffi::c_int;
-type c_char = std::ffi::c_char;
+type SizeT = usize;
+type Wchar = std::ffi::c_int;
+type CChar = std::ffi::c_char;
 
+#[allow(dead_code)]
 pub struct CWcharString {
-    pub data: Vec<wchar>,
+    pub data: Vec<Wchar>,
     pub n_chars: usize,
 }
 
@@ -29,12 +30,12 @@ impl CWcharString {
     pub unsafe fn from_c_string(c_string: &CString) -> CWcharString {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let c_string_ptr = (&c_string.as_bytes_with_nul()[0] as *const u8) as *const c_char;
+            let c_string_ptr = (&c_string.as_bytes_with_nul()[0] as *const u8) as *const CChar;
 
             let size_needed = unsafe { mbstowcs(ptr::null_mut(), c_string_ptr, 0) } + 1;
 
-            let mut data = vec![0 as wchar; size_needed as usize];
-            let wchar_ptr = &mut data.as_mut_slice()[0] as *mut wchar;
+            let mut data = vec![0 as Wchar; size_needed as usize];
+            let wchar_ptr = &mut data.as_mut_slice()[0] as *mut Wchar;
 
             let n_chars = unsafe { mbstowcs(wchar_ptr, c_string_ptr, size_needed) };
 
@@ -50,7 +51,7 @@ impl CWcharString {
             let utf8_bytes = c_string.to_bytes();
             let utf8_str = std::str::from_utf8_unchecked(utf8_bytes);
 
-            let mut data: Vec<wchar> = utf8_str.chars().map(|c| c as u32 as wchar).collect();
+            let mut data: Vec<Wchar> = utf8_str.chars().map(|c| c as u32 as Wchar).collect();
             data.push(0); // null terminator
 
             let n_chars = data.len() - 1; // excluding null terminator
@@ -75,17 +76,17 @@ impl CWcharString {
         }
     }
 
-    pub unsafe fn as_raw(&self) -> *const wchar {
-        &self.data[0] as *const wchar
+    pub unsafe fn as_raw(&self) -> *const Wchar {
+        &self.data[0] as *const Wchar
     }
 
-    pub unsafe fn from_raw_to_c_string(raw: *const wchar) -> Result<CString, ()> {
+    pub unsafe fn from_raw_to_c_string(raw: *const Wchar) -> Result<CString, ()> {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let n_bytes = unsafe { wcstombs(ptr::null_mut(), raw, 0) };
 
             let mut data = vec![0_u8; (n_bytes + 1) as usize];
-            let data_ptr = (&mut data[0] as *mut u8) as *mut c_char;
+            let data_ptr = (&mut data[0] as *mut u8) as *mut CChar;
 
             unsafe {
                 wcstombs(data_ptr, raw, n_bytes + 1);
@@ -130,6 +131,6 @@ impl CWcharString {
 
 #[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
-    fn mbstowcs(__pwcs: *mut wchar, __s: *const c_char, __n: size_t) -> size_t;
-    fn wcstombs(__s: *mut c_char, __pwcs: *const wchar, __n: size_t) -> size_t;
+    fn mbstowcs(__pwcs: *mut Wchar, __s: *const CChar, __n: SizeT) -> SizeT;
+    fn wcstombs(__s: *mut CChar, __pwcs: *const Wchar, __n: SizeT) -> SizeT;
 }

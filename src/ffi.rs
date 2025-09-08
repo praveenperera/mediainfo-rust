@@ -2,18 +2,18 @@ use crate::c_w_string::CWcharString;
 use std::ffi::CString;
 use std::path::Path;
 
-type uint64 = u64;
-type uint8 = u8;
-type size_t = usize;
-type wchar = std::ffi::c_int;
-type c_char = std::ffi::c_char;
-type c_int = std::ffi::c_int;
-type void = libc::c_void;
+type Uint64 = u64;
+type Uint8 = u8;
+type SizeT = usize;
+type Wchar = std::ffi::c_int;
+type CChar = std::ffi::c_char;
+type CInt = std::ffi::c_int;
+type Void = libc::c_void;
 
-type c_MediaInfoStream = std::ffi::c_int;
-type c_MediaInfoInfo = std::ffi::c_int;
+type CMediaInfoStream = std::ffi::c_int;
+type CMediaInfoInfo = std::ffi::c_int;
 
-const LC_CTYPE: c_int = 0;
+const LC_CTYPE: CInt = 0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MediaInfoStream {
@@ -28,7 +28,7 @@ pub enum MediaInfoStream {
 }
 
 impl MediaInfoStream {
-    fn c_compatible(self) -> c_MediaInfoStream {
+    fn c_compatible(self) -> CMediaInfoStream {
         self as std::ffi::c_int
     }
 
@@ -52,22 +52,22 @@ pub enum MediaInfoInfo {
     Text,
     Measure,
     Options,
-    Name_Text,
-    Measure_Text,
+    NameText,
+    MeasureText,
     Info,
     HowTo,
     Max,
 }
 
 impl MediaInfoInfo {
-    fn c_compatible(self) -> c_MediaInfoInfo {
+    fn c_compatible(self) -> CMediaInfoInfo {
         self as std::ffi::c_int
     }
 }
 
 #[derive(Debug)]
 pub struct MediaInfo {
-    handle: *mut void,
+    handle: *mut Void,
 }
 
 impl Default for MediaInfo {
@@ -88,7 +88,7 @@ impl Default for MediaInfo {
                 ensure_worker_initialized();
                 let handle_id = MediaInfo_New();
                 MediaInfo {
-                    handle: handle_id as *mut void,
+                    handle: handle_id as *mut Void,
                 }
             }
         }
@@ -104,7 +104,7 @@ impl MediaInfo {
         unsafe {
             let path_w_string = CWcharString::from_path(path);
             if path_w_string.is_err() {
-                return Err(MediaInfoError::RustToCStringError);
+                return Err(MediaInfoError::RustToCString);
             }
 
             let path_w_string = path_w_string.unwrap();
@@ -146,10 +146,10 @@ impl MediaInfo {
             let value_w_string = CWcharString::from_str(value);
 
             if param_w_string.is_err() {
-                return Err(MediaInfoError::RustToCStringError);
+                return Err(MediaInfoError::RustToCString);
             }
             if value_w_string.is_err() {
-                return Err(MediaInfoError::RustToCStringError);
+                return Err(MediaInfoError::RustToCString);
             }
 
             // TODO(erick): Do we need to free this memory? I could not
@@ -171,17 +171,17 @@ impl MediaInfo {
             {
                 let result_c_string = CWcharString::from_raw_to_c_string(result_ptr);
                 if result_c_string.is_err() {
-                    return Err(MediaInfoError::CToRustError);
+                    return Err(MediaInfoError::CToRust);
                 }
 
                 let result = result_c_string.unwrap().into_string();
                 if result.is_err() {
-                    return Err(MediaInfoError::CToRustError);
+                    return Err(MediaInfoError::CToRust);
                 }
 
                 let result = result.unwrap();
                 if result.is_empty() {
-                    return Err(MediaInfoError::ZeroLengthResultError);
+                    return Err(MediaInfoError::ZeroLengthResult);
                 }
 
                 Ok(result)
@@ -194,7 +194,7 @@ impl MediaInfo {
             // TODO(erick): Do we need to free this memory? I could not
             // find this information on the documentation.
             #[cfg(not(target_arch = "wasm32"))]
-            let result_ptr = MediaInfo_Inform(self.handle, 0 as size_t);
+            let result_ptr = MediaInfo_Inform(self.handle, 0 as SizeT);
 
             #[cfg(target_arch = "wasm32")]
             {
@@ -206,17 +206,17 @@ impl MediaInfo {
             {
                 let result_c_string = CWcharString::from_raw_to_c_string(result_ptr);
                 if result_c_string.is_err() {
-                    return Err(MediaInfoError::CToRustError);
+                    return Err(MediaInfoError::CToRust);
                 }
 
                 let result = result_c_string.unwrap().into_string();
                 if result.is_err() {
-                    return Err(MediaInfoError::CToRustError);
+                    return Err(MediaInfoError::CToRust);
                 }
 
                 let result = result.unwrap();
                 if result.is_empty() {
-                    return Err(MediaInfoError::ZeroLengthResultError);
+                    return Err(MediaInfoError::ZeroLengthResult);
                 }
 
                 Ok(result)
@@ -230,7 +230,7 @@ impl MediaInfo {
             let result = MediaInfo_Count_Get(
                 self.handle,
                 stream_kind.c_compatible(),
-                (usize::max_value()) as size_t,
+                (usize::MAX) as SizeT,
             ) as usize;
 
             #[cfg(target_arch = "wasm32")]
@@ -253,7 +253,7 @@ impl MediaInfo {
         unsafe {
             let param_w_string = CWcharString::from_str(parameter);
             if param_w_string.is_err() {
-                return Err(MediaInfoError::RustToCStringError);
+                return Err(MediaInfoError::RustToCString);
             }
 
             // TODO(erick): Do we need to free this memory? I could not
@@ -262,7 +262,7 @@ impl MediaInfo {
             let result_ptr = MediaInfo_Get(
                 self.handle,
                 info_stream.c_compatible(),
-                stream_number as size_t,
+                stream_number as SizeT,
                 param_w_string.unwrap().as_raw(),
                 info_kind.c_compatible(),
                 search_kind.c_compatible(),
@@ -285,17 +285,17 @@ impl MediaInfo {
             {
                 let result_c_string = CWcharString::from_raw_to_c_string(result_ptr);
                 if result_c_string.is_err() {
-                    return Err(MediaInfoError::CToRustError);
+                    return Err(MediaInfoError::CToRust);
                 }
 
                 let result = result_c_string.unwrap().into_string();
                 if result.is_err() {
-                    return Err(MediaInfoError::CToRustError);
+                    return Err(MediaInfoError::CToRust);
                 }
 
                 let result = result.unwrap();
                 if result.is_empty() {
-                    return Err(MediaInfoError::ZeroLengthResultError);
+                    return Err(MediaInfoError::ZeroLengthResult);
                 }
 
                 Ok(result)
@@ -324,9 +324,9 @@ impl MediaInfo {
         unsafe {
             #[cfg(not(target_arch = "wasm32"))]
             {
-                let bytes_ptr = &data[0] as *const uint8;
+                let bytes_ptr = &data[0] as *const Uint8;
                 let result =
-                    MediaInfo_Open_Buffer_Continue(self.handle, bytes_ptr, data.len() as size_t);
+                    MediaInfo_Open_Buffer_Continue(self.handle, bytes_ptr, data.len() as SizeT);
                 result as usize
             }
 
@@ -400,13 +400,17 @@ impl Drop for MediaInfo {
     }
 }
 
+// the underlying C library is thread-safe, so we can safely implement Send and Sync
+unsafe impl Send for MediaInfo {}
+unsafe impl Sync for MediaInfo {}
+
 #[derive(Debug)]
 pub enum MediaInfoError {
-    RustToCStringError,
-    CToRustError,
-    ZeroLengthResultError,
-    NonNumericResultError,
-    NoDataOpenError,
+    RustToCString,
+    CToRust,
+    ZeroLengthResult,
+    NonNumericResult,
+    NoDataOpen,
 }
 
 pub type MediaInfoResult<T> = Result<T, MediaInfoError>;
@@ -417,51 +421,50 @@ pub type MediaInfoResult<T> = Result<T, MediaInfoError>;
 
 #[cfg(not(target_arch = "wasm32"))]
 unsafe extern "C" {
-    fn MediaInfo_New() -> *mut void;
+    fn MediaInfo_New() -> *mut Void;
 
-    fn MediaInfo_Delete(handle: *mut void);
+    fn MediaInfo_Delete(handle: *mut Void);
 
-    fn MediaInfo_Open_Buffer_Init(handle: *mut void, buffer_size: uint64, offset: uint64)
-    -> size_t;
+    fn MediaInfo_Open_Buffer_Init(handle: *mut Void, buffer_size: Uint64, offset: Uint64) -> SizeT;
 
     fn MediaInfo_Open_Buffer_Continue(
-        handle: *mut void,
-        bytes: *const uint8,
-        length: size_t,
-    ) -> size_t;
+        handle: *mut Void,
+        bytes: *const Uint8,
+        length: SizeT,
+    ) -> SizeT;
 
-    fn MediaInfo_Open_Buffer_Continue_GoTo_Get(handle: *mut void) -> size_t;
+    fn MediaInfo_Open_Buffer_Continue_GoTo_Get(handle: *mut Void) -> SizeT;
 
-    fn MediaInfo_Open_Buffer_Finalize(handle: *mut void) -> size_t;
+    fn MediaInfo_Open_Buffer_Finalize(handle: *mut Void) -> SizeT;
 
-    fn MediaInfo_Open(handle: *mut void, path: *const wchar) -> size_t;
+    fn MediaInfo_Open(handle: *mut Void, path: *const Wchar) -> SizeT;
 
-    fn MediaInfo_Close(handle: *mut void);
+    fn MediaInfo_Close(handle: *mut Void);
 
     fn MediaInfo_Option(
-        handle: *mut void,
-        parameter: *const wchar,
-        value: *const wchar,
-    ) -> *const wchar;
+        handle: *mut Void,
+        parameter: *const Wchar,
+        value: *const Wchar,
+    ) -> *const Wchar;
 
-    fn MediaInfo_Inform(handle: *mut void, reserved: size_t) -> *const wchar;
+    fn MediaInfo_Inform(handle: *mut Void, reserved: SizeT) -> *const Wchar;
 
     fn MediaInfo_Count_Get(
-        handle: *mut void,
-        stream_kind: c_MediaInfoStream,
-        stream_number: size_t,
-    ) -> size_t;
+        handle: *mut Void,
+        stream_kind: CMediaInfoStream,
+        stream_number: SizeT,
+    ) -> SizeT;
 
     fn MediaInfo_Get(
-        handle: *mut void,
-        info_stream: c_MediaInfoStream,
-        stream_number: size_t,
-        parameter: *const wchar,
-        info_kind: c_MediaInfoInfo,
-        search_kind: c_MediaInfoInfo,
-    ) -> *const wchar;
+        handle: *mut Void,
+        info_stream: CMediaInfoStream,
+        stream_number: SizeT,
+        parameter: *const Wchar,
+        info_kind: CMediaInfoInfo,
+        search_kind: CMediaInfoInfo,
+    ) -> *const Wchar;
 
-    fn setlocale(category: c_int, locale: *const c_char) -> *const c_char;
+    fn setlocale(category: CInt, locale: *const CChar) -> *const CChar;
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -501,20 +504,17 @@ extern "C" {
     fn MediaInfo_Open_Buffer_Finalize(handle: u32) -> u32;
 
     #[wasm_bindgen(js_name = mediainfo_count_get)]
-    fn MediaInfo_Count_Get(
-        handle: u32,
-        stream_kind: c_MediaInfoStream,
-        stream_number: usize,
-    ) -> u32;
+    fn MediaInfo_Count_Get(handle: u32, stream_kind: CMediaInfoStream, stream_number: usize)
+    -> u32;
 
     #[wasm_bindgen(js_name = mediainfo_get)]
     fn MediaInfo_Get(
         handle: u32,
-        info_stream: c_MediaInfoStream,
+        info_stream: CMediaInfoStream,
         stream_number: usize,
         parameter: &str,
-        info_kind: c_MediaInfoInfo,
-        search_kind: c_MediaInfoInfo,
+        info_kind: CMediaInfoInfo,
+        search_kind: CMediaInfoInfo,
     ) -> String;
 
     #[wasm_bindgen(js_name = mediainfo_inform)]
