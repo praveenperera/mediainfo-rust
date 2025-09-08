@@ -235,31 +235,6 @@ fn link_system_libraries(target: &str) {
     }
 }
 
-fn build_from_source_fallback(mediainfo_src: &PathBuf, target: &str, out_dir: &PathBuf) {
-    println!("cargo:warning=Building MediaInfo for fallback target {target}");
-    let compile_script_path = mediainfo_src.join("SO_Compile.sh");
-    let compile_script_full_path = compile_script_path
-        .canonicalize()
-        .expect("Failed to canonicalize compile script path");
-
-    let output = Command::new("bash")
-        .arg(compile_script_full_path)
-        .current_dir(mediainfo_src)
-        .env("TARGET", target)
-        .env("ARTIFACT_PARENT_DIR", out_dir)
-        .output()
-        .expect("Failed to execute compilation script");
-
-    if !output.status.success() {
-        panic!(
-            "MediaInfo compilation failed for target {}:\nstdout: {}\nstderr: {}",
-            target,
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BuildType {
     Native,

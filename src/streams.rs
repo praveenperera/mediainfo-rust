@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::ffi::{MediaInfo, MediaInfoError, MediaInfoInfo, MediaInfoResult, MediaInfoStream};
 use chrono::{DateTime, NaiveDateTime, Utc};
 
@@ -44,7 +46,7 @@ macro_rules! mediainfo_attr {
                     MediaInfoInfo::Text,
                     MediaInfoInfo::Name,
                 ),
-                None => Err(MediaInfoError::NoDataOpenError),
+                None => Err(MediaInfoError::NoDataOpen),
             }
         }
     };
@@ -61,7 +63,7 @@ macro_rules! mediainfo_date {
                     MediaInfoInfo::Text,
                     MediaInfoInfo::Name,
                 )),
-                None => Err(MediaInfoError::NoDataOpenError),
+                None => Err(MediaInfoError::NoDataOpen),
             }
         }
     };
@@ -78,7 +80,7 @@ macro_rules! mediainfo_i64 {
                     MediaInfoInfo::Text,
                     MediaInfoInfo::Name,
                 )),
-                None => Err(MediaInfoError::NoDataOpenError),
+                None => Err(MediaInfoError::NoDataOpen),
             }
         }
     };
@@ -95,7 +97,7 @@ macro_rules! mediainfo_duration {
                     MediaInfoInfo::Text,
                     MediaInfoInfo::Name,
                 )),
-                None => Err(MediaInfoError::NoDataOpenError),
+                None => Err(MediaInfoError::NoDataOpen),
             }
         }
     };
@@ -115,14 +117,14 @@ pub trait BaseStream {
     fn result_to_duration(&self, result: MediaInfoResult<String>) -> MediaInfoResult<Duration> {
         match result?.parse::<u64>() {
             Ok(x) => Ok(Duration::from_millis(x)),
-            Err(_) => Err(MediaInfoError::NonNumericResultError),
+            Err(_) => Err(MediaInfoError::NonNumericResult),
         }
     }
 
     fn result_to_i64(&self, result: MediaInfoResult<String>) -> MediaInfoResult<i64> {
         match result?.parse::<i64>() {
             Ok(x) => Ok(x),
-            Err(_) => Err(MediaInfoError::NonNumericResultError),
+            Err(_) => Err(MediaInfoError::NonNumericResult),
         }
     }
 
@@ -134,7 +136,7 @@ pub trait BaseStream {
         println!("naive {naive:?}");
         match naive {
             Ok(x) => Ok(DateTime::<Utc>::from_naive_utc_and_offset(x, Utc)),
-            Err(_) => Err(MediaInfoError::NonNumericResultError),
+            Err(_) => Err(MediaInfoError::NonNumericResult),
         }
     }
 }
