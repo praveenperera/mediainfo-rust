@@ -25,7 +25,7 @@ struct BuildPaths {
 
 fn main() {
     let config = BuildConfig::new();
-    
+
     if config.target.contains("windows") {
         panic!("Windows builds not yet supported - please implement Windows-specific build logic");
     }
@@ -39,9 +39,15 @@ fn main() {
         let paths = BuildPaths::new(&config);
 
         if artifacts_exist(&paths) {
-            println!("cargo:warning=Using pre-built static libraries for {}", config.target);
+            println!(
+                "cargo:warning=Using pre-built static libraries for {}",
+                config.target
+            );
         } else {
-            println!("cargo:warning=Building MediaInfo static libraries for {}", config.target);
+            println!(
+                "cargo:warning=Building MediaInfo static libraries for {}",
+                config.target
+            );
             build_libraries(&config, &paths);
         }
 
@@ -49,7 +55,10 @@ fn main() {
     } else {
         // Fallback: build inside OUT_DIR copy and link directly from .libs
         let paths = BuildPaths::new(&config);
-        println!("cargo:warning=Unknown target {}; building from source in OUT_DIR", config.target);
+        println!(
+            "cargo:warning=Unknown target {}; building from source in OUT_DIR",
+            config.target
+        );
         prepare_build_directory(&config, &paths);
         run_build_script(&config, &paths);
         setup_linking_from_local_libs(&paths, &config.target);
@@ -62,7 +71,7 @@ impl BuildConfig {
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set by cargo"));
         let mediainfo_src = manifest_dir.join("mediainfo_src");
-        
+
         let (artifact_dir, known_target) = match target.as_str() {
             "aarch64-apple-darwin" => ("macos-arm64", true),
             "x86_64-apple-darwin" => ("macos-x86_64", true),
@@ -70,7 +79,7 @@ impl BuildConfig {
             "aarch64-unknown-linux-gnu" => ("linux-aarch64", true),
             _ => ("unknown", false),
         };
-        
+
         Self {
             target,
             manifest_dir,
@@ -87,14 +96,14 @@ impl BuildPaths {
         let work_dir = config.out_dir.join("mediainfo_build");
         let artifact_root = config.out_dir.join("artifacts");
         let artifact_path = artifact_root.join(&config.artifact_dir);
-        
+
         if !artifact_path.exists() {
             fs::create_dir_all(&artifact_path).expect("Failed to create artifact directory");
         }
-        
+
         let zenlib_artifact = artifact_path.join("libzen.a");
         let mediainfo_artifact = artifact_path.join("libmediainfo.a");
-        
+
         Self {
             work_dir,
             artifact_root,
@@ -108,7 +117,7 @@ impl BuildPaths {
 fn setup_rerun_triggers(config: &BuildConfig) {
     let build_rs = config.manifest_dir.join("build.rs");
     let so_compile = config.mediainfo_src.join("SO_Compile.sh");
-    
+
     println!("cargo:rerun-if-changed={}", config.mediainfo_src.display());
     println!("cargo:rerun-if-changed={}", build_rs.display());
     println!("cargo:rerun-if-changed={}", so_compile.display());
@@ -131,11 +140,11 @@ fn build_libraries(config: &BuildConfig, paths: &BuildPaths) {
 
 fn prepare_build_directory(config: &BuildConfig, paths: &BuildPaths) {
     let copied_src = paths.work_dir.join("mediainfo_src");
-    
+
     if copied_src.exists() {
         fs::remove_dir_all(&copied_src).expect("Failed to clean previous build dir");
     }
-    
+
     copy_dir_all(&config.mediainfo_src, &copied_src)
         .expect("Failed to copy mediainfo_src to OUT_DIR");
 }
@@ -172,12 +181,15 @@ fn run_build_script(config: &BuildConfig, paths: &BuildPaths) {
 }
 
 fn setup_linking(paths: &BuildPaths, target: &str) {
-    println!("cargo:rustc-link-search=native={}", paths.artifact_path.display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        paths.artifact_path.display()
+    );
     println!("cargo:rustc-link-lib=static=mediainfo");
     println!("cargo:rustc-link-lib=static=zen");
 
     link_system_libraries(target);
-    
+
     println!("cargo:warning=MediaInfo configured for static linking with target={target}");
 }
 
@@ -193,13 +205,18 @@ fn setup_linking_from_local_libs(paths: &BuildPaths, target: &str) {
         "cargo:rustc-link-search=native={}",
         mediainfo_lib_dir.display()
     );
-    println!("cargo:rustc-link-search=native={}", zenlib_lib_dir.display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        zenlib_lib_dir.display()
+    );
     println!("cargo:rustc-link-lib=static=mediainfo");
     println!("cargo:rustc-link-lib=static=zen");
 
     link_system_libraries(target);
 
-    println!("cargo:warning=MediaInfo configured for static linking with local .libs for target={target}");
+    println!(
+        "cargo:warning=MediaInfo configured for static linking with local .libs for target={target}"
+    );
 }
 
 fn link_system_libraries(target: &str) {
@@ -334,13 +351,13 @@ fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
     if !dst.exists() {
         fs::create_dir_all(dst)?;
     }
-    
+
     for entry in fs::read_dir(src)? {
         let entry = entry?;
         let file_type = entry.file_type()?;
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
-        
+
         if file_type.is_dir() {
             copy_dir_all(&src_path, &dst_path)?;
         } else if file_type.is_file() {
