@@ -1,7 +1,7 @@
 extern crate mediainfo;
 
 use mediainfo::MediaInfoWrapper;
-use std::{env::current_dir, path::PathBuf};
+use std::path::PathBuf;
 
 fn main() {
     let mut media_info = MediaInfoWrapper::new();
