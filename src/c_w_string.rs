@@ -83,14 +83,18 @@ impl CWcharString {
             return Err(());
         }
 
+        // utf-16 strings
         if mem::size_of::<Wchar>() == 2 {
             let mut len = 0;
             while unsafe { *raw.add(len) } != 0 {
                 len += 1;
             }
             let slice = unsafe { slice::from_raw_parts(raw as *const u16, len) };
-            String::from_utf16(slice).map_err(|_| ())
-        } else if mem::size_of::<Wchar>() == 4 {
+            return String::from_utf16(slice).map_err(|_| ());
+        }
+
+        // utf-32 strings
+        if mem::size_of::<Wchar>() == 4 {
             let mut result = String::new();
             let mut idx = 0;
             loop {
@@ -106,10 +110,10 @@ impl CWcharString {
                 }
                 idx += 1;
             }
-            Ok(result)
-        } else {
-            Err(())
+            return Ok(result);
         }
+
+        Err(())
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -120,6 +124,7 @@ impl CWcharString {
 
         let mut chars = Vec::new();
         let mut i = 0;
+
         loop {
             let wchar_val = unsafe { *raw.add(i) };
             if wchar_val == 0 {
