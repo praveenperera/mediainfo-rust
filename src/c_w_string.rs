@@ -137,3 +137,252 @@ impl CWcharString {
         Ok(chars.into_iter().collect())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ascii_string_conversion() {
+        unsafe {
+            let test_str = "Hello World";
+            let cw_string =
+                CWcharString::from_str(test_str).expect("Failed to create CWcharString");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, test_str);
+        }
+    }
+
+    #[test]
+    fn test_utf8_basic_unicode() {
+        unsafe {
+            let test_str = "Hello 世界";
+            let cw_string =
+                CWcharString::from_str(test_str).expect("Failed to create CWcharString");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, test_str);
+        }
+    }
+
+    #[test]
+    fn test_utf8_emoji() {
+        unsafe {
+            let test_str = "Hello 👋 World 🌍";
+            let cw_string =
+                CWcharString::from_str(test_str).expect("Failed to create CWcharString");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, test_str);
+        }
+    }
+
+    #[test]
+    fn test_utf8_mixed_scripts() {
+        unsafe {
+            let test_str = "English français 中文 العربية русский язык 日本語";
+            let cw_string =
+                CWcharString::from_str(test_str).expect("Failed to create CWcharString");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, test_str);
+        }
+    }
+
+    #[test]
+    fn test_utf8_mathematical_symbols() {
+        unsafe {
+            let test_str = "π ≈ 3.14159 ∑∞ ∫∂x ℝ²";
+            let cw_string =
+                CWcharString::from_str(test_str).expect("Failed to create CWcharString");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, test_str);
+        }
+    }
+
+    #[test]
+    fn test_utf8_special_whitespace() {
+        unsafe {
+            let test_str = "Normal\tTab\nNewline\r\nCRLF　Full-width space";
+            let cw_string =
+                CWcharString::from_str(test_str).expect("Failed to create CWcharString");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, test_str);
+        }
+    }
+
+    #[test]
+    fn test_empty_string() {
+        unsafe {
+            let test_str = "";
+            let cw_string =
+                CWcharString::from_str(test_str).expect("Failed to create CWcharString");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, test_str);
+        }
+    }
+
+    #[test]
+    fn test_null_byte_rejection() {
+        unsafe {
+            let test_str = "Hello\0World";
+            let result = CWcharString::from_str(test_str);
+
+            assert!(
+                result.is_err(),
+                "Should reject strings containing null bytes"
+            );
+        }
+    }
+
+    #[test]
+    fn test_path_conversion() {
+        unsafe {
+            let path_str = "/path/to/file with spaces and unicode 文件.txt";
+            let path = Path::new(path_str);
+            let cw_string =
+                CWcharString::from_path(path).expect("Failed to create CWcharString from path");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, path_str);
+        }
+    }
+
+    #[test]
+    fn test_wchar_size_consistency() {
+        // This test ensures our implementation correctly handles different wchar_t sizes
+        unsafe {
+            let test_strings = vec![
+                "ASCII only",
+                "Mixed ASCII and Unicode: café",
+                "Chinese: 你好世界",
+                "Japanese: こんにちは",
+                "Arabic: مرحبا",
+                "Emoji: 🚀🌟✨",
+                "Mathematical: ∀x∈ℝ: x²≥0",
+            ];
+
+            for test_str in test_strings {
+                let cw_string = CWcharString::from_str(test_str)
+                    .unwrap_or_else(|_| panic!("Failed to create CWcharString for: {}", test_str));
+
+                let result =
+                    CWcharString::from_raw_to_string(cw_string.as_raw()).unwrap_or_else(|_| {
+                        panic!("Failed to convert back to string for: {}", test_str)
+                    });
+
+                assert_eq!(result, test_str, "Mismatch for string: {}", test_str);
+            }
+        }
+    }
+
+    #[test]
+    fn test_surrogate_pairs() {
+        // Test characters that require surrogate pairs in UTF-16
+        unsafe {
+            let test_str = "𝕎𝕠𝕣𝕝𝕕 𝔬𝔣 𝔪𝔞𝔱𝔥: 𝒻(𝓍) = 𝓍²"; // Mathematical script characters
+            let cw_string =
+                CWcharString::from_str(test_str).expect("Failed to create CWcharString");
+
+            let result = CWcharString::from_raw_to_string(cw_string.as_raw())
+                .expect("Failed to convert back to string");
+
+            assert_eq!(result, test_str);
+        }
+    }
+
+    #[test]
+    fn test_mediainfo_parameter_strings() {
+        // Test strings commonly used as MediaInfo parameters
+        unsafe {
+            let parameters = vec![
+                "Complete",
+                "Inform",
+                "Output",
+                "Language",
+                "Details",
+                "Internet",
+                "File_Duplicate",
+                "ParseSpeed",
+                "ReadByHuman",
+                "Legacy",
+                "EncodeTime",
+                "File_CheckSideCarFiles",
+                "File_KeepInfo",
+                "File_StopAfterFilled",
+                "File_StopSubStreamAfterFilled",
+            ];
+
+            for param in parameters {
+                let cw_string = CWcharString::from_str(param).unwrap_or_else(|_| {
+                    panic!("Failed to create CWcharString for parameter: {}", param)
+                });
+
+                let result =
+                    CWcharString::from_raw_to_string(cw_string.as_raw()).unwrap_or_else(|_| {
+                        panic!("Failed to convert back to string for parameter: {}", param)
+                    });
+
+                assert_eq!(result, param, "Mismatch for parameter: {}", param);
+            }
+        }
+    }
+
+    #[test]
+    fn test_roundtrip_consistency() {
+        // Helper function to test roundtrip conversion
+        fn assert_roundtrip(input: &str) {
+            unsafe {
+                let wide = CWcharString::from_str(input).expect("from_str should succeed");
+                assert_eq!(wide.n_chars, input.chars().count());
+                assert_eq!(wide.data.last().copied(), Some(0));
+
+                let back = CWcharString::from_raw_to_string(wide.as_raw()).expect("roundtrip");
+                assert_eq!(back, input);
+            }
+        }
+
+        assert_roundtrip("MediaInfo");
+        assert_roundtrip("Grüße 🌍");
+        assert_roundtrip("Test with emoji: 👋🌍🚀");
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn test_invalid_wide_data_rejection() {
+        use std::mem;
+
+        // Test rejection of invalid Unicode code points
+        unsafe {
+            if mem::size_of::<Wchar>() == 4 {
+                // Invalid code point above Unicode range
+                let data = [0x110000 as Wchar, 0];
+                assert!(CWcharString::from_raw_to_string(data.as_ptr()).is_err());
+            } else if mem::size_of::<Wchar>() == 2 {
+                // Lone surrogate in UTF-16
+                let data = [0xD800 as Wchar, 0];
+                assert!(CWcharString::from_raw_to_string(data.as_ptr()).is_err());
+            }
+        }
+    }
+}
