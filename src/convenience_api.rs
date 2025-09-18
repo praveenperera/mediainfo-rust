@@ -64,6 +64,7 @@ impl MediaInfoWrapper {
             .lock()
             .unwrap()
             .open_buffer_init(data_len as u64, 0);
+
         let continue_result = self.handle.lock().unwrap().open_buffer_continue(data);
         let finalize_result = self.handle.lock().unwrap().open_buffer_finalize();
 

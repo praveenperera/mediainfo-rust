@@ -1,9 +1,6 @@
 // A wrapper for converting Rust strings into C wide char strings
-// and vice-versa. The conversion uses the C API, which is the
-// best way that I could think of getting the correct result
-// always. Since it uses the C API, a call to 'setlocale()' must
-// be made before any of theses functions are called or some strange
-// behaviour may be encountered.
+// and vice-versa. These conversions no longer rely on the process
+// locale so that they behave consistently regardless of setlocale().
 
 // This implementation is not the most efficient way of making this
 // conversion (allocation-wise), but some trade-off has to be made
@@ -11,14 +8,18 @@
 // if C had a better string implementation.
 
 use std::path::Path;
-use std::ptr;
 
-use std::ffi::CStr;
+#[cfg(target_arch = "wasm32")]
 use std::ffi::CString;
+#[cfg(not(target_arch = "wasm32"))]
+use std::mem;
+#[cfg(not(target_arch = "wasm32"))]
+use std::slice;
 
-type SizeT = usize;
+#[cfg(not(target_arch = "wasm32"))]
+type Wchar = libc::wchar_t;
+#[cfg(target_arch = "wasm32")]
 type Wchar = std::ffi::c_int;
-type CChar = std::ffi::c_char;
 
 #[allow(dead_code)]
 pub struct CWcharString {
@@ -27,46 +28,42 @@ pub struct CWcharString {
 }
 
 impl CWcharString {
-    pub unsafe fn from_c_string(c_string: &CString) -> CWcharString {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let c_string_ptr = (&c_string.as_bytes_with_nul()[0] as *const u8) as *const CChar;
-
-            let size_needed = unsafe { mbstowcs(ptr::null_mut(), c_string_ptr, 0) } + 1;
-
-            let mut data = vec![0 as Wchar; size_needed as usize];
-            let wchar_ptr = &mut data.as_mut_slice()[0] as *mut Wchar;
-
-            let n_chars = unsafe { mbstowcs(wchar_ptr, c_string_ptr, size_needed) };
-
-            CWcharString {
-                data,
-                n_chars: n_chars as usize,
-            }
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            // For WASM, convert UTF-8 to UTF-32 (wchar_t equivalent)
-            let utf8_bytes = c_string.to_bytes();
-            let utf8_str = std::str::from_utf8_unchecked(utf8_bytes);
-
-            let mut data: Vec<Wchar> = utf8_str.chars().map(|c| c as u32 as Wchar).collect();
-            data.push(0); // null terminator
-
-            let n_chars = data.len() - 1; // excluding null terminator
-
-            CWcharString { data, n_chars }
-        }
-    }
-
+    #[cfg(not(target_arch = "wasm32"))]
     pub unsafe fn from_str(string: &str) -> Result<CWcharString, ()> {
-        let c_string = CString::new(string);
-        if c_string.is_err() {
+        if string.chars().any(|c| c == '\0') {
             return Err(());
         }
 
-        Ok(unsafe { CWcharString::from_c_string(&c_string.unwrap()) })
+        let mut data = if mem::size_of::<Wchar>() == 2 {
+            string
+                .encode_utf16()
+                .map(|unit| unit as Wchar)
+                .collect::<Vec<_>>()
+        } else if mem::size_of::<Wchar>() == 4 {
+            string
+                .chars()
+                .map(|ch| ch as u32 as Wchar)
+                .collect::<Vec<_>>()
+        } else {
+            return Err(());
+        };
+
+        let n_chars = data.len();
+        data.push(0);
+
+        Ok(CWcharString { data, n_chars })
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub unsafe fn from_str(string: &str) -> Result<CWcharString, ()> {
+        let c_string = CString::new(string).map_err(|_| ())?;
+        let utf8_str = std::str::from_utf8_unchecked(c_string.as_bytes());
+
+        let mut data: Vec<Wchar> = utf8_str.chars().map(|c| c as u32 as Wchar).collect();
+        let n_chars = data.len();
+        data.push(0);
+
+        Ok(CWcharString { data, n_chars })
     }
 
     pub unsafe fn from_path(in_path: &Path) -> Result<CWcharString, ()> {
@@ -80,57 +77,63 @@ impl CWcharString {
         &self.data[0] as *const Wchar
     }
 
-    pub unsafe fn from_raw_to_c_string(raw: *const Wchar) -> Result<CString, ()> {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let n_bytes = unsafe { wcstombs(ptr::null_mut(), raw, 0) };
-
-            let mut data = vec![0_u8; (n_bytes + 1) as usize];
-            let data_ptr = (&mut data[0] as *mut u8) as *mut CChar;
-
-            unsafe {
-                wcstombs(data_ptr, raw, n_bytes + 1);
-            }
-            let c_str = CStr::from_bytes_with_nul(data.as_slice());
-            if c_str.is_err() {
-                return Err(());
-            }
-
-            Ok(c_str.unwrap().to_owned())
+    #[cfg(not(target_arch = "wasm32"))]
+    pub unsafe fn from_raw_to_string(raw: *const Wchar) -> Result<String, ()> {
+        if raw.is_null() {
+            return Err(());
         }
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            // For WASM, convert UTF-32 back to UTF-8
-            if raw.is_null() {
-                return Err(());
+        if mem::size_of::<Wchar>() == 2 {
+            let mut len = 0;
+            while unsafe { *raw.add(len) } != 0 {
+                len += 1;
             }
-
-            let mut chars = Vec::new();
-            let mut i = 0;
+            let slice = unsafe { slice::from_raw_parts(raw as *const u16, len) };
+            String::from_utf16(slice).map_err(|_| ())
+        } else if mem::size_of::<Wchar>() == 4 {
+            let mut result = String::new();
+            let mut idx = 0;
             loop {
-                let wchar_val = *raw.offset(i);
+                let wchar_val = unsafe { *raw.add(idx) };
                 if wchar_val == 0 {
                     break;
                 }
 
-                // Convert wchar (i32) to char, handling potential invalid values
-                if let Some(c) = std::char::from_u32(wchar_val as u32) {
-                    chars.push(c);
+                if let Some(ch) = std::char::from_u32(wchar_val as u32) {
+                    result.push(ch);
                 } else {
-                    return Err(()); // Invalid unicode
+                    return Err(());
                 }
-                i += 1;
+                idx += 1;
             }
-
-            let utf8_string: String = chars.into_iter().collect();
-            CString::new(utf8_string).map_err(|_| ())
+            Ok(result)
+        } else {
+            Err(())
         }
     }
-}
 
-#[cfg(not(target_arch = "wasm32"))]
-unsafe extern "C" {
-    fn mbstowcs(__pwcs: *mut Wchar, __s: *const CChar, __n: SizeT) -> SizeT;
-    fn wcstombs(__s: *mut CChar, __pwcs: *const Wchar, __n: SizeT) -> SizeT;
+    #[cfg(target_arch = "wasm32")]
+    pub unsafe fn from_raw_to_string(raw: *const Wchar) -> Result<String, ()> {
+        if raw.is_null() {
+            return Err(());
+        }
+
+        let mut chars = Vec::new();
+        let mut i = 0;
+        loop {
+            let wchar_val = unsafe { *raw.add(i) };
+            if wchar_val == 0 {
+                break;
+            }
+
+            if let Some(c) = std::char::from_u32(wchar_val as u32) {
+                chars.push(c);
+            } else {
+                return Err(());
+            }
+            i += 1;
+        }
+
+        Ok(chars.into_iter().collect())
+    }
 }
