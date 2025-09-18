@@ -6,7 +6,8 @@
       "Bash(make:*)",
       "Bash(git rm:*)",
       "Bash(bash:*)",
-      "Bash(cargo clippy:*)"
+      "Bash(cargo clippy:*)",
+      "Bash(cargo test)"
     ],
     "deny": [],
     "ask": []

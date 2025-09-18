@@ -1,19 +1,14 @@
 use crate::c_w_string::CWcharString;
-use std::ffi::CString;
 use std::path::Path;
 
 type Uint64 = u64;
 type Uint8 = u8;
 type SizeT = usize;
 type Wchar = libc::wchar_t;
-type CChar = std::ffi::c_char;
-type CInt = std::ffi::c_int;
 type Void = libc::c_void;
 
 type CMediaInfoStream = std::ffi::c_int;
 type CMediaInfoInfo = std::ffi::c_int;
-
-const LC_CTYPE: CInt = 0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MediaInfoStream {
@@ -75,10 +70,6 @@ impl Default for MediaInfo {
         unsafe {
             #[cfg(not(target_arch = "wasm32"))]
             {
-                // NOTE(erick): Setting the locale so we can
-                // work properly with c wide strings.
-                let empty_c_str = CString::new("").unwrap();
-                setlocale(LC_CTYPE, empty_c_str.as_ptr());
                 MediaInfo {
                     handle: MediaInfo_New(),
                 }
@@ -423,8 +414,6 @@ unsafe extern "C" {
         info_kind: CMediaInfoInfo,
         search_kind: CMediaInfoInfo,
     ) -> *const Wchar;
-
-    fn setlocale(category: CInt, locale: *const CChar) -> *const CChar;
 }
 
 #[cfg(target_arch = "wasm32")]
