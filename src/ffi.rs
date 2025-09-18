@@ -1,19 +1,14 @@
 use crate::c_w_string::CWcharString;
-use std::ffi::CString;
 use std::path::Path;
 
 type Uint64 = u64;
 type Uint8 = u8;
 type SizeT = usize;
-type Wchar = std::ffi::c_int;
-type CChar = std::ffi::c_char;
-type CInt = std::ffi::c_int;
+type Wchar = libc::wchar_t;
 type Void = libc::c_void;
 
 type CMediaInfoStream = std::ffi::c_int;
 type CMediaInfoInfo = std::ffi::c_int;
-
-const LC_CTYPE: CInt = 0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MediaInfoStream {
@@ -75,10 +70,6 @@ impl Default for MediaInfo {
         unsafe {
             #[cfg(not(target_arch = "wasm32"))]
             {
-                // NOTE(erick): Setting the locale so we can
-                // work properly with c wide strings.
-                let empty_c_str = CString::new("").unwrap();
-                setlocale(LC_CTYPE, empty_c_str.as_ptr());
                 MediaInfo {
                     handle: MediaInfo_New(),
                 }
@@ -142,84 +133,57 @@ impl MediaInfo {
 
     pub fn option(&mut self, parameter: &str, value: &str) -> MediaInfoResult<String> {
         unsafe {
-            let param_w_string = CWcharString::from_str(parameter);
-            let value_w_string = CWcharString::from_str(value);
-
-            if param_w_string.is_err() {
-                return Err(MediaInfoError::RustToCString);
-            }
-            if value_w_string.is_err() {
-                return Err(MediaInfoError::RustToCString);
-            }
-
-            // TODO(erick): Do we need to free this memory? I could not
-            // find this information on the documentation.
             #[cfg(not(target_arch = "wasm32"))]
-            let result_ptr = MediaInfo_Option(
-                self.handle,
-                param_w_string.unwrap().as_raw(),
-                value_w_string.unwrap().as_raw(),
-            );
+            {
+                let param_w_string =
+                    CWcharString::from_str(parameter).map_err(|_| MediaInfoError::RustToCString)?;
+                let value_w_string =
+                    CWcharString::from_str(value).map_err(|_| MediaInfoError::RustToCString)?;
+
+                let result_ptr = MediaInfo_Option(
+                    self.handle,
+                    param_w_string.as_raw(),
+                    value_w_string.as_raw(),
+                );
+
+                let result = CWcharString::from_raw_to_string(result_ptr)
+                    .map_err(|_| MediaInfoError::CToRust)?;
+
+                if result.is_empty() {
+                    return Err(MediaInfoError::ZeroLengthResult);
+                }
+
+                Ok(result)
+            }
 
             #[cfg(target_arch = "wasm32")]
             {
                 let result = MediaInfo_Option(self.handle as u32, parameter, value);
                 return Ok(result);
             }
-
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                let result_c_string = CWcharString::from_raw_to_c_string(result_ptr);
-                if result_c_string.is_err() {
-                    return Err(MediaInfoError::CToRust);
-                }
-
-                let result = result_c_string.unwrap().into_string();
-                if result.is_err() {
-                    return Err(MediaInfoError::CToRust);
-                }
-
-                let result = result.unwrap();
-                if result.is_empty() {
-                    return Err(MediaInfoError::ZeroLengthResult);
-                }
-
-                Ok(result)
-            }
         }
     }
 
     pub fn inform(&mut self) -> MediaInfoResult<String> {
         unsafe {
-            // TODO(erick): Do we need to free this memory? I could not
-            // find this information on the documentation.
-            #[cfg(not(target_arch = "wasm32"))]
-            let result_ptr = MediaInfo_Inform(self.handle, 0 as SizeT);
-
-            #[cfg(target_arch = "wasm32")]
-            {
-                let result = MediaInfo_Inform(self.handle as u32);
-                return Ok(result);
-            }
-
             #[cfg(not(target_arch = "wasm32"))]
             {
-                let result_c_string = CWcharString::from_raw_to_c_string(result_ptr);
-                if result_c_string.is_err() {
-                    return Err(MediaInfoError::CToRust);
-                }
+                let result_ptr = MediaInfo_Inform(self.handle, 0 as SizeT);
 
-                let result = result_c_string.unwrap().into_string();
-                if result.is_err() {
-                    return Err(MediaInfoError::CToRust);
-                }
+                let result = CWcharString::from_raw_to_string(result_ptr)
+                    .map_err(|_| MediaInfoError::CToRust)?;
 
-                let result = result.unwrap();
                 if result.is_empty() {
                     return Err(MediaInfoError::ZeroLengthResult);
                 }
 
                 Ok(result)
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                let result = MediaInfo_Inform(self.handle as u32);
+                return Ok(result);
             }
         }
     }
@@ -251,22 +215,29 @@ impl MediaInfo {
         search_kind: MediaInfoInfo,
     ) -> MediaInfoResult<String> {
         unsafe {
-            let param_w_string = CWcharString::from_str(parameter);
-            if param_w_string.is_err() {
-                return Err(MediaInfoError::RustToCString);
-            }
-
-            // TODO(erick): Do we need to free this memory? I could not
-            // find this information on the documentation.
             #[cfg(not(target_arch = "wasm32"))]
-            let result_ptr = MediaInfo_Get(
-                self.handle,
-                info_stream.c_compatible(),
-                stream_number as SizeT,
-                param_w_string.unwrap().as_raw(),
-                info_kind.c_compatible(),
-                search_kind.c_compatible(),
-            );
+            {
+                let param_w_string =
+                    CWcharString::from_str(parameter).map_err(|_| MediaInfoError::RustToCString)?;
+
+                let result_ptr = MediaInfo_Get(
+                    self.handle,
+                    info_stream.c_compatible(),
+                    stream_number as SizeT,
+                    param_w_string.as_raw(),
+                    info_kind.c_compatible(),
+                    search_kind.c_compatible(),
+                );
+
+                let result = CWcharString::from_raw_to_string(result_ptr)
+                    .map_err(|_| MediaInfoError::CToRust)?;
+
+                if result.is_empty() {
+                    return Err(MediaInfoError::ZeroLengthResult);
+                }
+
+                Ok(result)
+            }
 
             #[cfg(target_arch = "wasm32")]
             {
@@ -279,26 +250,6 @@ impl MediaInfo {
                     search_kind.c_compatible(),
                 );
                 return Ok(result);
-            }
-
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                let result_c_string = CWcharString::from_raw_to_c_string(result_ptr);
-                if result_c_string.is_err() {
-                    return Err(MediaInfoError::CToRust);
-                }
-
-                let result = result_c_string.unwrap().into_string();
-                if result.is_err() {
-                    return Err(MediaInfoError::CToRust);
-                }
-
-                let result = result.unwrap();
-                if result.is_empty() {
-                    return Err(MediaInfoError::ZeroLengthResult);
-                }
-
-                Ok(result)
             }
         }
     }
@@ -463,8 +414,6 @@ unsafe extern "C" {
         info_kind: CMediaInfoInfo,
         search_kind: CMediaInfoInfo,
     ) -> *const Wchar;
-
-    fn setlocale(category: CInt, locale: *const CChar) -> *const CChar;
 }
 
 #[cfg(target_arch = "wasm32")]
