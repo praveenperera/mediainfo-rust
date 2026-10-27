@@ -377,7 +377,6 @@ copy_artifacts() {
                 echo "Deployment Target: $(get_macos_deployment_target)"
                 ;;
         esac
-        echo "Build Date: $(date)"
     } > "$dest_dir/README.txt"
     
     log "Build info created: $dest_dir/README.txt"
